@@ -236,10 +236,10 @@ export const saveVariety = async (req, res, next) => {
         // --- ĐÓNG GIAO DỊCH (COMMIT) ---
         if (t) await t.commit();
 
-        // Đẩy vào hàng đợi sau khi đã commit thành công
-        for (const imgRecord of newlyAddedImageJobs) {
-            pushToQueue(imgRecord);
-        }
+        // // Đẩy vào hàng đợi sau khi đã commit thành công
+        // for (const imgRecord of newlyAddedImageJobs) {
+        //     pushToQueue(imgRecord);
+        // }
 
         return res.status(200).json({ 
             success: true, 

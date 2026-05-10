@@ -65,8 +65,8 @@ const startServer = async () => {
         }
     }
 
-    // --- RabbitMQ ---
-    await initRabbitMQ();
+    // // --- RabbitMQ ---
+    // await initRabbitMQ();
 
     const app = express();
     const PORT = process.env.PORT || 3000;
