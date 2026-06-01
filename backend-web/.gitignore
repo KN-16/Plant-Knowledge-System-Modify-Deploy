@@ -30,3 +30,7 @@ uploads/
 .venv/
 
 backend-AI/
+
+data
+
+uploads.zip

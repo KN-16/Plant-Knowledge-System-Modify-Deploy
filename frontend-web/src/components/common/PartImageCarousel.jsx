@@ -9,7 +9,7 @@ import { Navigation, Autoplay } from "swiper/modules";
 // =========================================================================
 // 1. ĐƯA COMPONENT SWIPER RA NGOÀI (QUAN TRỌNG NHẤT ĐỂ KHÔNG BỊ RESET)
 // =========================================================================
-const PartImageCarousel = ({ images, backendUrl, onImageClick, isModalOpen }) => {
+const PartImageCarousel = ({ images, backendUrl, onImageClick, isModalOpen}) => {
     const [swiperInstance, setSwiperInstance] = useState(null);
 
     // Lắng nghe biến isModalOpen để Tạm dừng / Tiếp tục
@@ -46,12 +46,12 @@ const PartImageCarousel = ({ images, backendUrl, onImageClick, isModalOpen }) =>
                     <div 
                         className={`position-relative rounded-3 overflow-hidden shadow-sm border cursor-zoom-in group-hover ${img.is_background ? 'border-warning border-2' : ''}`}
                         style={{ height: '140px' }}
-                        onClick={() => onImageClick(`${backendUrl}${img.url}`)} // Gọi hàm từ component Cha
+                        onClick={() => onImageClick(`${!img.is_external ? backendUrl : ''}${img.url}`)} // Gọi hàm từ component Cha
                     >
                         {img.is_background && (
                             <Badge bg="warning" text="dark" className="position-absolute top-0 start-0 m-2 z-1 shadow-sm px-2">⭐ Ảnh bìa</Badge>
                         )}
-                        <img src={`${backendUrl}${img.url}`} className="w-100 h-100 object-fit-cover transition-transform" alt="part" />
+                        <img src={`${!img.is_external ? backendUrl : ''}${img.url}`} className="w-100 h-100 object-fit-cover transition-transform" alt="part" />
                         <div className="position-absolute top-50 start-50 translate-middle text-white opacity-0 icon-zoom transition-opacity z-2">
                             <FaSearchPlus size={28} />
                         </div>

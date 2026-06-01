@@ -13,7 +13,7 @@ const generateCustomId = async (modelName, prefix, transaction = null) => {
   counter.seq += 1;
   await counter.save({ transaction });
 
-  return `${prefix}-${String(counter.seq).padStart(5, '0')}`;
+  return `${prefix}-${String(counter.seq).padStart(6, '0')}`;
 };
 
 export default generateCustomId;

@@ -38,8 +38,6 @@ router.put('/varieties/:id', requireAuth, uploadToDisk.array('images', 20), varC
 router.delete('/varieties/:id', requireAuth, varController.deleteVariety);
 // Get provinces for distribution tab
 
-
-
 // GET list
 router.get('/:type', taxController.getList);
 // POST create

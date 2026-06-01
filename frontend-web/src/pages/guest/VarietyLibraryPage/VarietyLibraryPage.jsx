@@ -8,8 +8,8 @@ import Swal from 'sweetalert2';
 import publicService from '../../../services/publicService';
 import './VarietyLibraryPage.css';
 
-import LibraryFilterSidebar from '../../../components/common/LibraryFilterSidebar';
-import VarietyGrid from '../../../components/common/VarietyGrid';
+import LibraryFilterSidebar from '../../../components/common/VarietyLibraryPage/LibraryFilterSidebar';
+import VarietyGrid from '../../../components/common/VarietyLibraryPage/VarietyGrid';
 import CompareModal from '../../../components/modal/ModalForm/CompareModal';
 
 
@@ -23,6 +23,7 @@ const VarietyLibraryPage = () => {
 
     const [initialLoading, setInitialLoading] = useState(true);
     const [isFiltering, setIsFiltering] = useState(false);
+    const [isFetchFilterOptions, setIsFetchFilterOptions] = useState(false);
 
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
     const [uiMapping, setUiMapping] = useState({ });
@@ -52,24 +53,27 @@ const VarietyLibraryPage = () => {
     useEffect(() => { 
         const fetchSmartSelectOptions = async () => {
             try {
+                setIsFetchFilterOptions(true);
                 const [familiesData, generaData, speciesData, provincesData] = await Promise.all([
                     publicService.fetchAllItems('families'),
                     publicService.fetchAllItems('genera'),
                     publicService.fetchAllItems('species'),
                     publicService.fetchProvinces()
                 ]);
-                const genusOptions = generaData.map(item => ({ value: item.genus_id, label: `${item.scientific_name} - ${item.vietnamese_name}`, family_id: item.Family.family_id }));
-                const speciesOptions = speciesData.map(item => ({ value: item.species_id, label: `${item.scientific_name} - ${item.vietnamese_name}`, genus_id: item.Genus.genus_id, family_id: item.Genus.Family.family_id }));
+                const genusOptions = generaData.map(item => ({ value: item.genus_id, label: `${item.scientific_name} ${item.vietnamese_name ? '- ' + item.vietnamese_name: ''}`, family_id: item.Family?.family_id }));
+                const speciesOptions = speciesData.map(item => ({ value: item.species_id, label: `${item.scientific_name} ${item.vietnamese_name ? "- " + item.vietnamese_name : ""}`, genus_id: item.Genus?.genus_id, family_id: item.Genus?.Family?.family_id }));
                 setSmartSelectOptions({
-                    family: familiesData.map(item => ({ value: item.family_id, label: `${item.scientific_name} - ${item.vietnamese_name}` })),
+                    family: familiesData.map(item => ({ value: item.family_id, label: `${item.scientific_name} ${item.vietnamese_name ? "- " + item.vietnamese_name : ""}` })),
                     genus: genusOptions,
                     species: speciesOptions,
-                    provinces: provincesData.map(item => ({ value: item.province_id, label: `${item.province_name} - ${item.country}` }))
+                    provinces: provincesData.map(item => ({ value: item.province_id, label: `${item.province_name} ${item.country ? "- " + item.country : ""}` }))
                 });
                 setLocalGenusOptions(genusOptions);
                 setLocalSpeciesOptions(speciesOptions);
             } catch (error) {
                 console.error('Error fetching smart select options:', error);
+            } finally {
+                setIsFetchFilterOptions(false);
             }
         };
 
@@ -157,21 +161,14 @@ const VarietyLibraryPage = () => {
         activeFilters.has_flower_filter = activeSections.flower;
         activeFilters.has_distribution_filter = activeSections.distribution;
         // Xử lý các filter SmartSelect đặc biệt: species_option, genus_option, family_option, dist_province_option
-        if (filters.species_option) {
+        if (filters.species_option) 
             activeFilters.species_id = filters.species_option.value;
-            activeFilters.genus_id = filters.species_option.genus_id;
-            activeFilters.family_id = filters.species_option.family_id;
-        }
-        if (filters.genus_option) {
+        if (filters.genus_option) 
             activeFilters.genus_id = filters.genus_option.value;
-            activeFilters.family_id = filters.genus_option.family_id;
-        }
-        if (filters.family_option) {
+        if (filters.family_option) 
             activeFilters.family_id = filters.family_option.value;
-        }
-        if (filters.dist_province_option) {
+        if (filters.dist_province_option) 
             activeFilters.dist_province_id = filters.dist_province_option.value;
-        }
 
         Object.keys(filters).forEach(key => { if (filters[key]) activeFilters[key] = filters[key]; });
         setSearchParams(activeFilters);
@@ -248,6 +245,19 @@ const VarietyLibraryPage = () => {
             <Container fluid className="px-3 px-xl-5">
                 <Row className="g-4 mt-1 flex-lg-nowrap">
                     <Col lg={isSidebarExpanded ? 4 : 3}>
+                        {isFetchFilterOptions ? (
+                        <div
+                    className="bg-white rounded-4 shadow-sm d-flex justify-content-center align-items-center"
+                    style={{ minHeight: "600px" }}
+                >
+                    <div className="text-center">
+                        <Spinner animation="border" variant="success" />
+                        <div className="mt-3 text-muted">
+                            Đang tải bộ lọc...
+                        </div>
+                    </div>
+                </div>
+                ) : (
                         <LibraryFilterSidebar 
                             filters={filters} 
                             onFilterChange={handleFilterChange} 
@@ -256,7 +266,6 @@ const VarietyLibraryPage = () => {
                             onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
                             isExpanded={isSidebarExpanded}
                             uiMapping={uiMapping}
-                            loading={initialLoading}
                             activeSections={activeSections}
                             setActiveSections={setActiveSections}
                             SmartSelectOptions={SmartSelectOptions}
@@ -265,6 +274,7 @@ const VarietyLibraryPage = () => {
                             setLocalGenusOptions={setLocalGenusOptions}
                             setLocalSpeciesOptions={setLocalSpeciesOptions}
                         />
+                    )}
                     </Col>
 
                     <Col lg={isSidebarExpanded ? 8 : 9} className="transition-all">
@@ -356,11 +366,31 @@ const VarietyLibraryPage = () => {
                 </Row>
             </Container>
 
-            {compareList.length > 0 && (
-                <div className="position-fixed bottom-0 end-0 m-4 z-3 animation-slide-up">
-                    <Button variant="success" size="lg" className="rounded-pill shadow-lg fw-bold px-4 py-3" onClick={openCompareModal}>
-                        <FaExchangeAlt className="me-2" /> So Sánh ({compareList.length})
+                        {compareList.length > 0 && (
+                <div className="position-fixed bottom-0 end-0 m-4 z-3 d-flex align-items-center gap-2 animation-slide-up">
+                    
+                    {/* NÚT XÓA SẠCH (CLEAR ALL) - DESIGN TRÒN MINIMALIST SANG TRỌNG */}
+                    <Button 
+                        variant="white" 
+                        className="bg-white rounded-circle shadow-lg border border-light p-0 d-flex align-items-center justify-content-center text-muted hover-text-danger transition-all" 
+                        style={{ width: '50px', height: '50px' }}
+                        onClick={() => {setCompareList([]); setCompareData([]);}}
+                        title="Xóa toàn bộ danh sách so sánh"
+                    >
+                        <span style={{ fontSize: '1.4rem', fontWeight: '300', marginTop: '-2px' }}>&times;</span>
                     </Button>
+            
+                    {/* NÚT ĐIỀU HƯỚNG MA TRẬN SO SÁNH CHÍNH */}
+                    <Button 
+                        variant="success" 
+                        size="lg" 
+                        className="rounded-pill shadow-lg fw-bold px-4 d-flex align-items-center justify-content-center" 
+                        style={{ height: '50px', fontSize: '0.88rem', letterSpacing: '0.2px' }}
+                        onClick={openCompareModal}
+                    >
+                        <FaExchangeAlt className="me-2" size={13} /> So Sánh ({compareList.length})
+                    </Button>
+                    
                 </div>
             )}
 

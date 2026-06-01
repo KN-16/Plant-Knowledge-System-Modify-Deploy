@@ -44,6 +44,32 @@ const publicService = {
     aiSearchImage: async (imageBase64, bbox, parts) => {
         const response = await api.post('/ai/search', { imageBase64, bbox, parts });
         return response.data;
+    },
+    getSpeciesPageSmartSelectOptions: async () => {
+        const response = await api.get('/public/species/smart-select-options');
+        return response.data;
+    },
+    getSpeciesList: async (params) => {
+        const response = await api.get('/public/species', { params });
+        return response.data;
+    },
+    getCompareDataSpecies: async (ids, rank) => {
+        const response = await api.post('/public/species/compare', {
+            ids: ids.join(','), 
+            rank: rank
+        });
+        return response.data;
+    },
+    getTaxonomyDetail: async (id, rank) => {
+    // Gọi phương thức GET truyền kèm Query Parameter động theo chuẩn cấu trúc phân tầng
+        const response = await api.get(`/public/taxonomy/detail/${id}`, {
+            params: { rank: rank }
+        });
+        return response.data;
+    },
+    getTaxonomyTreeSmartSelectOptions: async () => {
+        const response = await api.get('/public/taxonomy-tree/smart-select-options');
+        return response.data;
     }
 };
 

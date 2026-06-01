@@ -21,6 +21,8 @@ const VarietyDetailPage = lazy(() => import('../pages/guest/VarietyDetailPage'))
 const SearchResultsPage = lazy(() => import('../pages/guest/SearchResultsPage'));
 const UserProfile = lazy(() => import('../pages/admin/UserProfile'));
 const AccountPage = lazy(() => import('../pages/admin/AccountPage'));
+const SpeciesLibraryPage = lazy(() => import('../pages/guest/SpeciesLibraryPage'));
+const SpeciesDetailPage = lazy(() => import('../pages/guest/SpeciesDetailPage'));
 
 
 const AppRoutes = () => {
@@ -35,6 +37,8 @@ const AppRoutes = () => {
                 { path: 'taxonomy-explorer', element: <TaxonomyExplorerPage /> },
                 { path: 'varieties/:id', element: <VarietyDetailPage /> },
                 { path: 'ai-search-results', element: <SearchResultsPage /> },
+                { path: 'species', element: <SpeciesLibraryPage /> },
+                { path: 'species/detail/:id', element: <SpeciesDetailPage /> },
             ]
         },
         {
