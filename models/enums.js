@@ -2,14 +2,23 @@
 
 // Định nghĩa các giá trị Enum chuẩn cho Database (Tiếng Anh)
 const RAW_ENUMS = {
+    RANK_TYPE: ['phylum', 'class', 'order', 'family', 'genus', 'species'],
+    RANK_TYPE_MAPPED: {
+        // Tên model Sequelize : Tên rank chuẩn trong database
+        "Phylum": "phylum",
+        "Class": "class",
+        "Order": "order",
+        "Family": "family",
+        "Genus": "genus",
+        "Species": "species"
+    },
     LIFE_FORM: ['Tree', 'Shrub', 'Herb', 'Climber', 'Epiphyte'],
     DISTRIBUTION_STATUS: ['Native', 'Cultivated', 'Invasive', 'Endemic', 'Naturalized'],
     STEM_TYPE: ['Woody', 'Herbaceous', 'Climbing', 'Shrubby', 'Fleshy', 'Rhizome', 'Bulb', 'Tuber'], 
     STEM_SURFACE: ['Smooth', 'Hairy', 'Spiny', 'Glabrous', 'Rough'], 
-    LEAF_TYPE: ['Simple', 'Compound_Pinnate', 'Compound_Palmate', 'Bipinnate', 'Trifoliolate'], 
+    LEAF_TYPE: ['Simple', 'Compound_Pinnate', 'Compound_Palmate', 'Bipinnate', 'Trifoliolate', 'Orbicular', 'Peltate', 'Acicular'], 
     LEAF_SHAPE: ['Ovate', 'Lanceolate', 'Elliptic', 'Linear', 
-        'Cordate', 'Oblong', 'Palmate', 'Obovate', 'Orbicular', 
-        'Peltate', 'Acicular'], 
+        'Cordate', 'Oblong', 'Palmate', 'Obovate'],
     LEAF_MARGIN: ['Entire', 'Serrate', 'Lobed', 'Dentate', 'Undulate', 'Spiny', 'Rough'], 
     LEAF_ARRANGEMENT: ['Alternate', 'Opposite', 'Whorled', 'Spiral', 'Basal', 'Fascicled'],
     FRUIT_TYPE: ['Berry', 'Drupe', 'Pome', 'Capsule', 'Achene', 'Nut', 'Samara', 'Legume'], 
@@ -18,6 +27,8 @@ const RAW_ENUMS = {
     PART_TYPE: ['Leaf', 'Flower', 'Stem', 'Root', 'Fruit', 'Seed', 'Whole_Plant'], 
     VARIANT_TYPE: ['Variety', 'Phenotype', 'Cultivar', 'Forma'], 
     IMAGE_STATUS: ['Pending', 'Completed', 'Failed'],
+    LANGUAGE: ['vie', 'eng', 'other'],
+    STATUS_TAXONOMY: ['accepted', 'synonym', 'proparte_synonym', 'misapplied', 'unresolved', 'doubtful', 'excluded']
 };
 
 // Định nghĩa các mapping để hiển thị trên UI (Tiếng Việt + Tiếng Anh)
@@ -138,7 +149,26 @@ const UI_MAPPINGS = {
         'Hairy': 'Có lông (Hairy)',
         'Spiny': 'Có gai (Spiny)',
         'Rough': 'Sần sùi / Nhám (Rough)'
+    },
+    STATUS_TAXONOMY: {
+        'accepted': 'Được chấp nhận (Accepted)',
+        'synonym': 'Đồng nghĩa (Synonym)',
+        'proparte_synonym': 'Đồng nghĩa một phần (Pro parte synonym)',
+        'misapplied': 'Áp dụng sai (Misapplied)',
+        'unresolved': 'Chưa phân định (Unresolved)',
+        'doubtful': 'Còn nghi ngờ (Doubtful)',
+        'excluded': 'Bị loại trừ (Excluded)'
+    },
+    RANK_TYPE:
+    {
+        'phylum': 'Ngành (Phylum)',
+        'class': 'Lớp (Class)',
+        'order': 'Thứ tự (Order)',
+        'family': 'Họ (Family)',
+        'genus': 'Chi (Genus)',
+        'species': 'Loài (Species)'
     }
 };
+const RANK_TYPE_MAPPED = RAW_ENUMS.RANK_TYPE_MAPPED;
 
-export { RAW_ENUMS, UI_MAPPINGS };
+export { RAW_ENUMS, UI_MAPPINGS , RANK_TYPE_MAPPED};

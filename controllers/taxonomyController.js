@@ -358,6 +358,7 @@ export const fetchAllItems = async (req, res, next) => {
 
         res.json(items);
     } catch (error) {
+        console.error("Lỗi khi fetch tất cả items:", error);
         next(error);
     }
 };

@@ -1,5 +1,5 @@
 import express from 'express';
-// import cors from 'cors';
+import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import path from 'path';
@@ -12,14 +12,14 @@ import { initRabbitMQ } from './config/rabbitmq.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-if (process.env.NODE_ENV !== 'production') {
-  // Ở local, load file .env.development
-  dotenv.config({ path: path.resolve(__dirname, '.env.development') });
-  console.log(`✅ Loaded environment: .env.development`);
-} else {
-  // Ở production, hệ thống tự động nhận biến từ OS/Docker
-  console.log(`✅ Running in PRODUCTION mode. Environment variables loaded from Docker.`);
-}
+// if (process.env.NODE_ENV !== 'production') {
+//   // Ở local, load file .env.development
+//   dotenv.config({ path: path.resolve(__dirname, '.env.development') });
+//   console.log(`✅ Loaded environment: .env.development`);
+// } else {
+//   // Ở production, hệ thống tự động nhận biến từ OS/Docker
+//   console.log(`✅ Running in PRODUCTION mode. Environment variables loaded from Docker.`);
+// }
 
 console.log(`✅ Database Config: ${process.env.DB_NAME} @ ${process.env.DB_HOST}`);
 
@@ -71,13 +71,14 @@ const startServer = async () => {
     const app = express();
     const PORT = process.env.PORT || 3000;
 
-    // // --- Middleware ---
+    // --- Middleware ---
     // const corsOptions = {
     //   origin: [process.env.ORIGIN_FRONTEND, 'http://localhost:5173'],
     //   credentials: true,
     // };
     
     // app.use(cors(corsOptions));
+
     app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));

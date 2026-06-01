@@ -1,8 +1,13 @@
 import { Op } from 'sequelize';
-import { sequelize, Variety, PlantImage, 
-    Species, Genus, Family, 
+import {
+    sequelize, 
+    Phylum, Class, Order, Family, Genus, Species, Variety,
     MorphologyLeaf, MorphologyStem, MorphologyFlower, 
-    Distribution, Province } from '../models/index.js';
+    MorphologyLeafSpecies, MorphologyStemSpecies, MorphologyFlowerSpecies, MorphologyFruitSpecies,
+    HoSpeciesData, CommonName, TaxonomyImage, PlantImage, TaxonomyHistory, Distribution, Province,
+    BookImage
+} from '../models/index.js';
+import { UI_MAPPINGS } from '../models/enums.js';
 
 export const getHomeData = async (req, res, next) => {
     try {
@@ -60,6 +65,7 @@ export const getHomeData = async (req, res, next) => {
             richMediaVarieties: formatVarieties(richMediaVarieties)
         });
     } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu trang chủ:", error);
         next(error);
     }
 };
@@ -114,30 +120,30 @@ export const getPublicVarietiesList = async (req, res, next) => {
                 { distinctive_feature: { [Op.iLike]: searchTerm } }
             ];
 
-            // Loại trừ thông minh: Chỉ tìm ở cấp bậc chưa được chọn bởi Filter
-            if (!species_id) {
-                searchConditions.push(
-                    { '$Species.scientific_name$': { [Op.iLike]: searchTerm } },
-                    { '$Species.vietnamese_name$': { [Op.iLike]: searchTerm } },
-                    { '$Species.synonyms$': { [Op.iLike]: searchTerm } },
-                    { '$Species.other_names$': { [Op.iLike]: searchTerm } },
-                    { '$Species.uses$': { [Op.iLike]: searchTerm } }
-                );
-            }
+            // // Loại trừ thông minh: Chỉ tìm ở cấp bậc chưa được chọn bởi Filter
+            // if (!species_id) {
+            //     searchConditions.push(
+            //         { '$Species.scientific_name$': { [Op.iLike]: searchTerm } },
+            //         { '$Species.vietnamese_name$': { [Op.iLike]: searchTerm } },
+            //         { '$Species.synonyms$': { [Op.iLike]: searchTerm } },
+            //         { '$Species.other_names$': { [Op.iLike]: searchTerm } },
+            //         { '$Species.uses$': { [Op.iLike]: searchTerm } }
+            //     );
+            // }
 
-            if (!genus_id && !species_id) {  
-                searchConditions.push(
-                    { '$Species.Genus.scientific_name$': { [Op.iLike]: searchTerm } },
-                    { '$Species.Genus.vietnamese_name$': { [Op.iLike]: searchTerm } }
-                );
-            }
+            // if (!genus_id && !species_id) {  
+            //     searchConditions.push(
+            //         { '$Species.Genus.scientific_name$': { [Op.iLike]: searchTerm } },
+            //         { '$Species.Genus.vietnamese_name$': { [Op.iLike]: searchTerm } }
+            //     );
+            // }
 
-            if (!family_id && !genus_id && !species_id) {
-                searchConditions.push(
-                    { '$Species.Genus.Family.scientific_name$': { [Op.iLike]: searchTerm } },
-                    { '$Species.Genus.Family.vietnamese_name$': { [Op.iLike]: searchTerm } }
-                );
-            }
+            // if (!family_id && !genus_id && !species_id) {
+            //     searchConditions.push(
+            //         { '$Species.Genus.Family.scientific_name$': { [Op.iLike]: searchTerm } },
+            //         { '$Species.Genus.Family.vietnamese_name$': { [Op.iLike]: searchTerm } }
+            //     );
+            // }
 
             whereCondition[Op.or] = searchConditions;
         }
@@ -353,53 +359,53 @@ export const getCompareVarieties = async (req, res, next) => {
     }
 };
 
-export const getTaxonomyTree = async (req, res, next) => {
-    try {
-        const { family_id, genus_id, species_id } = req.query;
+// export const getTaxonomyTree = async (req, res, next) => {
+//     try {
+//         const { family_id, genus_id, species_id } = req.query;
 
-        // Xây dựng điều kiện lọc cho từng cấp độ
-        const familyWhere = {};
-        if (family_id) familyWhere.family_id = family_id;
+//         // Xây dựng điều kiện lọc cho từng cấp độ
+//         const familyWhere = {};
+//         if (family_id) familyWhere.family_id = family_id;
 
-        const genusWhere = {};
-        if (genus_id) genusWhere.genus_id = genus_id;
+//         const genusWhere = {};
+//         if (genus_id) genusWhere.genus_id = genus_id;
 
-        const speciesWhere = {};
-        if (species_id) speciesWhere.species_id = species_id;
+//         const speciesWhere = {};
+//         if (species_id) speciesWhere.species_id = species_id;
 
-        // Bật required (Inner Join) nếu cấp độ bên trong bị lọc
-        const isSpeciesRequired = Object.keys(speciesWhere).length > 0;
-        const isGenusRequired = Object.keys(genusWhere).length > 0 || isSpeciesRequired;
+//         // Bật required (Inner Join) nếu cấp độ bên trong bị lọc
+//         const isSpeciesRequired = Object.keys(speciesWhere).length > 0;
+//         const isGenusRequired = Object.keys(genusWhere).length > 0 || isSpeciesRequired;
 
-        const taxonomyTree = await Family.findAll({
-            where: familyWhere,
-            attributes: ['family_id', 'scientific_name', 'vietnamese_name'],
-            order: [['scientific_name', 'ASC']],
-            include: [{
-                model: Genus,
-                where: isGenusRequired ? genusWhere : undefined,
-                required: isGenusRequired,
-                attributes: ['genus_id', 'scientific_name', 'vietnamese_name'],
-                include: [{
-                    model: Species,
-                    where: isSpeciesRequired ? speciesWhere : undefined,
-                    required: isSpeciesRequired,
-                    attributes: ['species_id', 'scientific_name', 'vietnamese_name'],
-                    include: [{
-                        model: Variety,
-                        attributes: ['variety_id', 'common_name', 'variety_name', 'variant_type', 'code'],
-                        include : [{ model: PlantImage, where: { is_background: true }, required: false, limit: 1, attributes: ['url'] }]
-                    }]
-                }]
-            }]
-        });
+//         const taxonomyTree = await Family.findAll({
+//             where: familyWhere,
+//             attributes: ['family_id', 'scientific_name', 'vietnamese_name'],
+//             order: [['scientific_name', 'ASC']],
+//             include: [{
+//                 model: Genus,
+//                 where: isGenusRequired ? genusWhere : undefined,
+//                 required: isGenusRequired,
+//                 attributes: ['genus_id', 'scientific_name', 'vietnamese_name'],
+//                 include: [{
+//                     model: Species,
+//                     where: isSpeciesRequired ? speciesWhere : undefined,
+//                     required: isSpeciesRequired,
+//                     attributes: ['species_id', 'scientific_name', 'vietnamese_name'],
+//                     include: [{
+//                         model: Variety,
+//                         attributes: ['variety_id', 'common_name', 'variety_name', 'variant_type', 'code'],
+//                         include : [{ model: PlantImage, where: { is_background: true }, required: false, limit: 1, attributes: ['url'] }]
+//                     }]
+//                 }]
+//             }]
+//         });
 
-        res.status(200).json({ success: true, data: taxonomyTree });
-    } catch (error) {
-        console.error("Lỗi lấy cây phân loại:", error);
-        next(error);
-    }
-};
+//         res.status(200).json({ success: true, data: taxonomyTree });
+//     } catch (error) {
+//         console.error("Lỗi lấy cây phân loại:", error);
+//         next(error);
+//     }
+// };
 
 // API Lấy chi tiết Biến thể
 export const getVarietyDetail = async (req, res, next) => {
@@ -451,4 +457,897 @@ export const incrementViewCount = async (req, res, next) => {
 
 export const checkHealth = (req, res) => {
     return res.status(200).json({ success: true, message: 'Server is running smoothly.' });
+};
+
+// Species Page - API Lấy options cho Smart Select (Phylum, Class, Order, Family, Genus)
+export const getSpeciesPageSmartSelectOptions = async (req, res) => {
+    try {
+        const [phyla, classes, orders, families, genera] = await Promise.all([
+            Phylum.findAll({ attributes: ['phylum_id', 'scientific_name', 'canonical_name'], raw: true }),
+            Class.findAll({ attributes: ['class_id', 'scientific_name', 'canonical_name', 'phylum_id'], raw: true }),
+            Order.findAll({ 
+                attributes: ['order_id', 'scientific_name', 'canonical_name'],
+                include: [{ model: Class, attributes: ['class_id', 'phylum_id'] }],
+                raw: true, nest: true
+            }),
+            Family.findAll({ 
+                attributes: ['family_id', 'scientific_name', 'canonical_name'],
+                include: [{ model: Order, attributes: ['order_id'],include: [{ model: Class, attributes: ['class_id', 'phylum_id'] }] }],
+                raw: true, nest: true
+            }),
+            Genus.findAll({ 
+                attributes: ['genus_id', 'scientific_name', 'canonical_name', 'family_id'],
+                include: [{ model: Family, attributes: ['family_id'],include: [{ model: Order,attributes: ['order_id'], include: [{ model: Class, attributes: ['class_id', 'phylum_id'] }] }] }],
+                raw: true, nest: true
+            })
+        ]);
+
+        return res.json([phyla, classes, orders, families, genera]);
+    } catch (error) {
+        console.error('Error in getSpeciesPageSmartSelectOptions:', error);
+        return res.status(500).json({ error: 'Lỗi đồng bộ cấu trúc dữ liệu phả hệ.' });
+    }
+}
+
+/**
+ * API CHÍNH: Lọc, Tìm kiếm tự do, phân trang dữ liệu Đa cấp bậc (Từ Ngành đến Loài)
+ */
+export const getSpeciesList = async (req, res) => {
+    try {
+        const {
+            display_rank = 'species', // Mặc định hiển thị danh sách bậc Loài
+            search, sort, page = 1, limit = 12,
+            phylum_id, class_id, order_id, family_id, genus_id,
+            is_recorded_in_vietnam, uses, description,
+            has_leaf_filter, leaf_type, leaf_shape, leaf_arrangement, leaf_margin, leaf_length_min, leaf_width_min, petiole_length_min,
+            has_stem_filter, stem_type, stem_surface, stem_color, stem_height_min,
+            has_flower_filter, inflorescence, flower_color, flower_petal_count,
+            habit_stem_root, leaves, reproduction, phenology, habitat_ecology, notes,
+            book_volume, book_page_from, book_page_to
+        } = req.query;
+
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        
+        // 1. Ánh xạ Model gốc và tiền tố quản lý theo cấp bậc lựa chọn hiển thị từ Frontend
+        let targetModel;
+        let idField;
+        let codePrefix = 'TAX';
+
+        switch (display_rank) {
+            case 'phylum': targetModel = Phylum; idField = 'phylum_id'; codePrefix = 'PHYL'; break;
+            case 'class': targetModel = Class; idField = 'class_id'; codePrefix = 'CLASS'; break;
+            case 'order': targetModel = Order; idField = 'order_id'; codePrefix = 'ORD'; break;
+            case 'family': targetModel = Family; idField = 'family_id'; codePrefix = 'FAM'; break;
+            case 'genus': targetModel = Genus; idField = 'genus_id'; codePrefix = 'GEN'; break;
+            default: targetModel = Species; idField = 'species_id'; codePrefix = 'SPC'; break;
+        }
+
+        // 2. Thiết lập điều kiện lọc cơ bản (Root Where clause)
+        const rootWhere = {};
+        const rootIncludes = [];
+
+        // Tìm kiếm tự do theo Tên khoa học hoặc Mã code hệ thống
+        if (search) {
+            rootWhere[Op.or] = [
+                { scientific_name: { [Op.iLike]: `%${search}%` } },
+                { code: { [Op.iLike]: `%${search}%` } }
+            ];
+        }
+
+        if (is_recorded_in_vietnam !== undefined && is_recorded_in_vietnam !== '') {
+            rootWhere.is_recorded_in_vietnam = is_recorded_in_vietnam === 'true';
+        }
+
+        if (description && targetModel.rawAttributes.description) {
+            rootWhere.description = { [Op.iLike]: `%${description}%` };
+        }
+
+        // 3. Xây dựng chuỗi kết hợp JOIN phả hệ cấp trên động dựa trên Model đích
+        if (phylum_id && idField !== 'phylum_id') {
+            if (display_rank === 'class') rootWhere.phylum_id = phylum_id;
+            else if (display_rank === 'order') rootIncludes.push({ model: Class, where: { phylum_id }, required: true, attributes: [] });
+            else if (display_rank === 'family') rootIncludes.push({ model: Order, required: true, attributes: [], include: [{ model: Class, where: { phylum_id }, required: true, attributes: [] }] });
+            else if (display_rank === 'genus') rootIncludes.push({ model: Family, required: true, attributes: [], include: [{ model: Order, required: true, attributes: [], include: [{ model: Class, where: { phylum_id }, required: true, attributes: [] }] }] });
+            else if (display_rank === 'species') rootIncludes.push({ model: Genus, required: true, attributes: [], include: [{ model: Family, required: true, attributes: [], include: [{ model: Order, required: true, include: [{ model: Class, where: { phylum_id }, required: true, attributes: [] }] }] }] });
+        }
+
+        if (class_id && ['order', 'family', 'genus', 'species'].includes(display_rank)) {
+            if (display_rank === 'order') rootWhere.class_id = class_id;
+            else if (display_rank === 'family') rootIncludes.push({ model: Order, where: { class_id }, required: true, attributes: [] });
+            else if (display_rank === 'genus') rootIncludes.push({ model: Family, required: true, attributes: [], include: [{ model: Order, where: { class_id }, required: true, attributes: [] }] });
+            else if (display_rank === 'species') rootIncludes.push({ model: Genus, required: true, attributes: [], include: [{ model: Family, required: true, include: [{ model: Order, where: { class_id }, required: true, attributes: [] }] }] });
+        }
+
+        if (order_id && ['family', 'genus', 'species'].includes(display_rank)) {
+            if (display_rank === 'family') rootWhere.order_id = order_id;
+            else if (display_rank === 'genus') rootIncludes.push({ model: Family, where: { order_id }, required: true, attributes: [] });
+            else if (display_rank === 'species') rootIncludes.push({ model: Genus, required: true, attributes: [], include: [{ model: Family, where: { order_id }, required: true, attributes: [] }] });
+        }
+
+        if (family_id && ['genus', 'species'].includes(display_rank)) {
+            if (display_rank === 'genus') rootWhere.family_id = family_id;
+            else if (display_rank === 'species') rootIncludes.push({ model: Genus, where: { family_id }, required: true, attributes: [] });
+        }
+
+        if (genus_id && display_rank === 'species') {
+            rootWhere.genus_id = genus_id;
+        }
+
+        // 4. Các bộ lọc hình thái đặc thù của Sách Thầy Hộ chỉ kích hoạt ở bậc Loài (Species)
+        if (display_rank === 'species') {
+            if (uses) rootWhere.uses = { [Op.iLike]: `%${uses}%` };
+
+            if (has_leaf_filter === 'true') {
+                const leafWhere = {};
+                if (leaf_type) leafWhere.leaf_type = leaf_type;
+                if (leaf_shape) leafWhere.shape = leaf_shape;
+                if (leaf_arrangement) leafWhere.arrangement = leaf_arrangement;
+                if (leaf_margin) leafWhere.margin = leaf_margin;
+                if (leaf_length_min) leafWhere.length_min = { [Op.gte]: parseFloat(leaf_length_min) };
+                if (leaf_width_min) leafWhere.width_min = { [Op.gte]: parseFloat(leaf_width_min) };
+                if (petiole_length_min) leafWhere.petiole_length = { [Op.gte]: parseFloat(petiole_length_min) };
+                if (Object.keys(leafWhere).length > 0)
+                    rootIncludes.push({ model: MorphologyLeafSpecies, where: leafWhere, required: true, attributes: [] });
+            }
+
+            if (has_stem_filter === 'true') {
+                const stemWhere = {};
+                if (stem_type) stemWhere.stem_type = stem_type;
+                if (stem_surface) stemWhere.surface = stem_surface;
+                if (stem_color) stemWhere.color = { [Op.iLike]: `%${stem_color}%` };
+                if (stem_height_min) stemWhere.height_min = { [Op.gte]: parseFloat(stem_height_min) };
+                if (Object.keys(stemWhere).length > 0)
+                    rootIncludes.push({ model: MorphologyStemSpecies, where: stemWhere, required: true, attributes: [] });
+            }
+
+            if (has_flower_filter === 'true') {
+                const flowerWhere = {};
+                if (inflorescence) flowerWhere.inflorescence = inflorescence;
+                if (flower_color) flowerWhere.color = { [Op.iLike]: `%${flower_color}%` };
+                if (flower_petal_count) flowerWhere.petal_count = parseInt(flower_petal_count);
+                if (Object.keys(flowerWhere).length > 0)
+                    rootIncludes.push({ model: MorphologyFlowerSpecies, where: flowerWhere, required: true, attributes: [] });
+            }
+
+            const hoWhere = {};
+            if (habit_stem_root) hoWhere.habit_stem_root = { [Op.iLike]: `%${habit_stem_root}%` };
+            if (leaves) hoWhere.leaves = { [Op.iLike]: `%${leaves}%` };
+            if (reproduction) hoWhere.reproduction = { [Op.iLike]: `%${reproduction}%` };
+            if (phenology) hoWhere.phenology = { [Op.iLike]: `%${phenology}%` };
+            if (habitat_ecology) hoWhere.habitat_ecology = { [Op.iLike]: `%${habitat_ecology}%` };
+            if (notes) hoWhere.notes = { [Op.iLike]: `%${notes}%` };
+            const bookWhere = {};
+            if (book_volume) bookWhere.volume = parseInt(book_volume);
+            if (book_page_from || book_page_to) {
+                bookWhere.page_number = {};
+                if (book_page_from) bookWhere.page_number[Op.gte] = parseInt(book_page_from); // Từ trang
+                if (book_page_to) bookWhere.page_number[Op.lte] = parseInt(book_page_to);     // Đến trang
+            }
+            
+            // Thực hiện đóng gói Eager Loading đệ quy lồng nhau
+            if (Object.keys(hoWhere).length > 0 || Object.keys(bookWhere).length > 0) {
+                const hoIncludeStructure = { 
+                    model: HoSpeciesData, 
+                    where: hoWhere, 
+                    required: true, 
+                    attributes: [] 
+                };
+
+                // Nếu có bộ lọc tập/trang sách, tiến hành JOIN lồng sâu xuống bảng BookImage thông qua alias page_image
+                if (Object.keys(bookWhere).length > 0) {
+                    hoIncludeStructure.include = [{
+                        model: BookImage, // Đảm bảo đã import model BookImage ở đầu file
+                        as: 'page_image',
+                        where: bookWhere,
+                        required: true,
+                        attributes: []
+                    }];
+                }
+                
+                rootIncludes.push(hoIncludeStructure);
+            }
+        }
+
+        // 5. Thực thi quét lấy dữ liệu thô từ Database
+        let { count, rows } = await targetModel.findAndCountAll({
+            where: rootWhere,
+            include: rootIncludes,
+            limit: parseInt(limit),
+            offset: offset,
+            distinct: true,
+            order: [['createdAt', 'DESC']]
+        });
+
+        // Tìm kiếm bổ sung trong mảng CommonNames đa ngôn ngữ để không bỏ sót thực thể
+        if (search) {
+            const matchedCommonNames = await CommonName.findAll({
+                where: { name: { [Op.iLike]: `%${search}%` }, rank: display_rank },
+                attributes: ['id_entity'],
+                raw: true
+            });
+            const extraIds = matchedCommonNames.map(cn => cn.id_entity);
+            const standardLoadedIds = rows.map(r => r[idField]);
+            const missingIds = extraIds.filter(id => !standardLoadedIds.includes(id));
+
+            if (missingIds.length > 0) {
+                const extraRows = await targetModel.findAll({
+                    where: { [idField]: { [Op.in]: missingIds } },
+                    include: rootIncludes
+                });
+                rows = [...rows, ...extraRows];
+                count += extraRows.length;
+            }
+        }
+
+        const entityIds = rows.map(r => r[idField]);
+
+        // 6. TRÍCH XUẤT VÀ XỬ LÝ ĐA NGÔN NGỮ VÀ HÌNH ẢNH TRÊN RAM (Tối ưu hóa tuyệt đối)
+        const [commonNames, taxonomyImages] = await Promise.all([
+            CommonName.findAll({
+                where: { 
+                    id_entity: { [Op.in]: entityIds }, 
+                    rank: display_rank,
+                    lang: { [Op.in]: ['vie', 'eng', 'other'] } // Nạp toàn bộ các ngôn ngữ có sẵn phục vụ fallback
+                },
+                order: [['primary', 'DESC'], ['id', 'ASC']], 
+                raw: true
+            }),
+            TaxonomyImage.findAll({
+                where: { id_entity: { [Op.in]: entityIds }, rank: display_rank },
+                order: [['is_background', 'DESC'], ['createdAt', 'DESC']], 
+                raw: true
+            })
+        ]);
+
+        const formattedData = rows.map(item => {
+            const itemId = item[idField];
+
+            // Gom cụm mảng tên gọi của thực thể hiện tại
+            const itemCommonNames = commonNames.filter(cn => cn.id_entity === itemId);
+            
+            // Phân tách mảng ngôn ngữ riêng biệt để tạo chuỗi Fallback thông minh
+            const vieNames = itemCommonNames.filter(cn => cn.lang === 'vie');
+            const engNames = itemCommonNames.filter(cn => cn.lang === 'eng');
+            const otherNames = itemCommonNames.filter(cn => cn.lang === 'other');
+
+            const extractTopName = (namesArray) => {
+                if (namesArray.length === 0) return '';
+                const primary = namesArray.find(n => n.primary === true);
+                return primary ? primary.name : namesArray[0].name;
+            };
+
+            const vietnamese_name = extractTopName(vieNames);
+            const eng_name = extractTopName(engNames);
+            const other_name = extractTopName(otherNames);
+
+            // Cơ chế Fallback bậc thang chuẩn: Tiếng Việt -> Tiếng Anh -> Khác
+            const finalCommonName = vietnamese_name || eng_name || other_name || '';
+
+            // Xử lý hình ảnh đại diện Cover
+            const itemImages = taxonomyImages.filter(img => img.id_entity === itemId);
+            const backgroundRecord = itemImages.find(img => img.is_background === true) || itemImages[0];
+            
+            let thumbnail = '/default-plant.png';
+            let isExternalImage = true;
+
+            if (backgroundRecord) {
+                thumbnail = backgroundRecord.url;
+                isExternalImage = backgroundRecord.is_external;
+            }
+
+            // ĐẾM CHÍNH XÁC SỐ ẢNH SỐ HÓA: Chỉ đếm các bản ghi lưu trữ cục bộ có cờ is_external === false
+            const digitizedImageCount = itemImages.filter(img => img.is_external === false).length;
+
+            return {
+                [idField]: itemId,
+                code: item.code || `${codePrefix}-${String(itemId).padStart(4, '0')}`,
+                scientific_name: item.scientific_name || 'N/A',
+                canonical_name: item.canonical_name || item.scientific_name || 'N/A',
+                common_name: finalCommonName, // Trả chuỗi đã xử lý fallback ưu tiên về cho FE render gọn nhẹ
+                thumbnail: thumbnail,
+                is_external_image: isExternalImage,
+                current_rank: display_rank,
+                image_count: itemImages.length, // Tổng số kho tư liệu ảnh
+                digitized_image_count: digitizedImageCount, // Huy hiệu số hóa chuẩn xác
+                view_count: item.view_count || 0
+            };
+        });
+
+        // 7. SẮP XẾP ĐỘNG TRÊN RAM (Ưu tiên theo Tên khoa học scientific_name)
+        if (sort === 'name_asc') {
+            formattedData.sort((a, b) => a.scientific_name.localeCompare(b.scientific_name));
+        } else if (sort === 'name_desc') {
+            formattedData.sort((a, b) => b.scientific_name.localeCompare(a.scientific_name));
+        } else if (sort === 'view_count_desc') {
+            formattedData.sort((a, b) => b.view_count - a.view_count);
+        } else if (sort === 'view_count_asc') {
+            formattedData.sort((a, b) => a.view_count - b.view_count);
+        } else if (sort === 'image_count_desc') {
+            formattedData.sort((a, b) => b.image_count - a.image_count);
+        } else if (sort === 'image_count_asc') {
+            formattedData.sort((a, b) => a.image_count - b.image_count);
+        }
+
+        return res.json({
+            data: formattedData,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: count,
+                totalPages: Math.ceil(count / limit)
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in getSpeciesList Engine:', error);
+        return res.status(500).json({ error: 'Lỗi hệ thống trong quá trình kết xuất dữ liệu.' });
+    }
+};
+
+/**
+ * API: Lấy thông tin cơ quan phục vụ ma trận so sánh nâng cao (Chỉ dành riêng cho Loài)
+ */
+export const getCompareDataSpecies = async (req, res) => {
+    try {
+        const { ids, rank } = req.body;
+        if (!ids) {
+            return res.status(400).json({ message: 'Danh sách ID đối chiếu không được để trống.' });
+        }
+
+        const idArray = ids.split(',').map(Number);
+        const currentRank = rank || 'species';
+
+        let targetModel;
+        let includeStructures = [];
+
+        // 1. Xây dựng cấu trúc cây phân loại ngược dựa vào bậc hiển thị hiện tại
+        switch (currentRank) {
+            case 'phylum':
+                targetModel = Phylum;
+                break;
+                
+            case 'class':
+                targetModel = Class;
+                includeStructures = [{ model: Phylum }];
+                break;
+                
+            case 'order':
+                targetModel = Order;
+                includeStructures = [{ model: Class, include: [Phylum] }];
+                break;
+                
+            case 'family':
+                targetModel = Family;
+                includeStructures = [{ model: Order, include: [{ model: Class, include: [Phylum] }] }];
+                break;
+                
+            case 'genus':
+                targetModel = Genus;
+                includeStructures = [{ model: Family, include: [{ model: Order, include: [{ model: Class, include: [Phylum] }] }] }];
+                break;
+                
+            case 'species':
+            default:
+                targetModel = Species;
+                includeStructures = [
+                    {
+                        model: Genus,
+                        include: [{ model: Family, include: [{ model: Order, include: [{ model: Class, include: [Phylum] }] }] }]
+                    },
+                    { model: HoSpeciesData },
+                    { model: MorphologyLeafSpecies },
+                    { model: MorphologyStemSpecies },
+                    { model: MorphologyFlowerSpecies },
+                    { model: MorphologyFruitSpecies }
+                ];
+                break;
+        }
+
+        // 2. Thực hiện truy vấn dữ liệu phả hệ gốc
+        const results = await targetModel.findAll({
+            where: {
+                [`${currentRank}_id`]: idArray
+            },
+            include: includeStructures
+        });
+
+        // 3. THU THẬP TẤT CẢ CÁC ĐỊNH DANH ĐỂ QUERIES COMMON NAMES (TRÁNH CƠ CHẾ N+1)
+        const entitiesToQuery = [];
+        const ranksChain = ['phylum', 'class', 'order', 'family', 'genus', 'species'];
+
+        results.forEach(item => {
+            let currentObj = item;
+            let rankIndex = ranksChain.indexOf(currentRank);
+            
+            // Thu thập thực thể chính ở tầng Root
+            entitiesToQuery.push({ id: currentObj[`${currentRank}_id`], rank: currentRank, obj: currentObj });
+            
+            // Leo ngược cây phân loại tuyến tính để bóc tách ID của các cấp bậc cha
+            while (rankIndex > 0) {
+                const nextRank = ranksChain[rankIndex - 1];
+                const associationKey = nextRank.charAt(0).toUpperCase() + nextRank.slice(1); // VD: genus -> Genus
+                
+                if (currentObj[associationKey]) {
+                    currentObj = currentObj[associationKey];
+                    entitiesToQuery.push({ id: currentObj[`${nextRank}_id`], rank: nextRank, obj: currentObj });
+                    rankIndex--;
+                } else {
+                    break;
+                }
+            }
+        });
+
+        // 4. TRÍCH XUẤT VÀ TÍNH TOÁN BẢN DỊCH THEO THỨ TỰ ƯU TIÊN FALLBACK KÈM HÌNH ẢNH ĐẠI DIỆN
+        if (entitiesToQuery.length > 0) {
+    const conditions = entitiesToQuery.map(e => ({
+        id_entity: e.id,
+        rank: e.rank
+    }));
+
+    // Truy vấn song song đồng thời cả bảng Tên gọi và bảng Kho ảnh đại diện (Tránh thắt nút cổ chai)
+    const [commonNames, taxonomyImages] = await Promise.all([
+        CommonName.findAll({
+            where: {
+                [Op.or]: conditions,
+                lang: { [Op.in]: ['vie', 'eng', 'other'] }
+            },
+            order: [['primary', 'DESC'], ['id', 'ASC']],
+            raw: true
+        }),
+        TaxonomyImage.findAll({
+            where: {
+                [Op.or]: conditions
+            },
+            order: [['is_background', 'DESC'], ['createdAt', 'DESC']],
+            raw: true
+        })
+    ]);
+
+    // MAP ẢNH ĐẠI DIỆN COVER VÀO ROOT ITEMS
+    results.forEach(item => {
+        const itemId = item[`${currentRank}_id`];
+        const itemImages = taxonomyImages.filter(img => img.id_entity === itemId && img.rank === currentRank);
+        const backgroundRecord = itemImages.find(img => img.is_background === true) || itemImages[0];
+        
+        if (backgroundRecord) {
+            if (item.setDataValue) {
+                item.setDataValue('thumbnail', backgroundRecord.url);
+                item.setDataValue('is_external_image', backgroundRecord.is_external || false);
+            } else {
+                item.thumbnail = backgroundRecord.url;
+                item.is_external_image = backgroundRecord.is_external || false;
+            }
+        }
+    });
+
+    // Gán ngược dữ liệu tên chuẩn hóa sau xử lý bậc thang vào từng Object node (Giữ nguyên logic cũ của bạn)
+    entitiesToQuery.forEach(e => {
+        const itemCommonNames = commonNames.filter(cn => cn.id_entity === e.id && cn.rank === e.rank);
+        
+        const vieNames = itemCommonNames.filter(cn => cn.lang === 'vie');
+        const engNames = itemCommonNames.filter(cn => cn.lang === 'eng');
+        const otherNames = itemCommonNames.filter(cn => cn.lang === 'other');
+
+        const extractTopName = (namesArray) => {
+            if (namesArray.length === 0) return '';
+            const primary = namesArray.find(n => n.primary === true);
+            return primary ? primary.name : namesArray[0].name;
+        };
+
+        const vietnamese_name = extractTopName(vieNames);
+        const eng_name = extractTopName(engNames);
+        const other_name = extractTopName(otherNames);
+
+        const finalCommonName = vietnamese_name || eng_name || other_name || '';
+        
+        if (e.obj.setDataValue) {
+            e.obj.setDataValue('common_name', finalCommonName);
+        } else {
+            e.obj.common_name = finalCommonName;
+        }
+    });
+    }
+
+        return res.status(200).json(results);
+    } catch (error) {
+        console.error('Lỗi xảy ra tại API getCompareTaxonomyData:', error);
+        return res.status(500).json({ message: 'Lỗi máy chủ nội bộ khi bóc tách ma trận đối chiếu.' });
+    }
+};
+
+// controllers/publicController.js hoặc taxonomyController.js tương ứng bên Backend
+export const getTaxonomyDetail = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const currentRank = req.query.rank || 'species';
+
+        let targetModel;
+        let includeStructures = [];
+        const idField = `${currentRank}_id`;
+
+        // 1. Phân luồng Model đích danh và cấu trúc Eager Loading leo ngược cây phả hệ
+        switch (currentRank) {
+            case 'phylum': targetModel = Phylum; break;
+            case 'class':
+                targetModel = Class;
+                includeStructures = [{ model: Phylum }];
+                break;
+            case 'order':
+                targetModel = Order;
+                includeStructures = [{ model: Class, include: [Phylum] }];
+                break;
+            case 'family':
+                targetModel = Family;
+                includeStructures = [{ model: Order, include: [{ model: Class, include: [Phylum] }] }];
+                break;
+            case 'genus':
+                targetModel = Genus;
+                includeStructures = [{ model: Family, include: [{ model: Order, include: [{ model: Class, include: [Phylum] }] }] }];
+                break;
+            case 'species':
+            default:
+                targetModel = Species;
+                includeStructures = [
+                    { model: Genus, include: [{ model: Family, include: [{ model: Order, include: [{ model: Class, include: [Phylum] }] }] }] },
+                    { model: HoSpeciesData,
+                        include: [{
+                        model: BookImage,
+                        as: 'page_image'
+                                }]
+                     },
+                    { model: MorphologyLeafSpecies },
+                    { model: MorphologyStemSpecies },
+                    { model: MorphologyFlowerSpecies },
+                    { model: MorphologyFruitSpecies }
+                ];
+                break;
+        }
+
+        // 2. Thực thi truy vấn Node hiện tại
+        const entity = await targetModel.findOne({
+            where: { [idField]: id },
+            include: includeStructures
+        });
+
+        if (!entity) {
+            return res.status(404).json({ message: 'Không tìm thấy hồ sơ dữ liệu thực thể phân loại học.' });
+        }
+
+        // 3. Quy quét ID phả hệ lồng nhau để xử lý Common Names nhóm theo ngôn ngữ
+        const entitiesInChain = [];
+        const ranksChain = ['phylum', 'class', 'order', 'family', 'genus', 'species'];
+        
+        let pointer = entity;
+        let rankIdx = ranksChain.indexOf(currentRank);
+        entitiesInChain.push({ id: pointer[idField], rank: currentRank, nodeRef: pointer });
+
+        while (rankIdx > 0) {
+            const parentRank = ranksChain[rankIdx - 1];
+            const associationAlias = parentRank.charAt(0).toUpperCase() + parentRank.slice(1);
+            if (pointer[associationAlias]) {
+                pointer = pointer[associationAlias];
+                entitiesInChain.push({ id: pointer[`${parentRank}_id`], rank: parentRank, nodeRef: pointer });
+                rankIdx--;
+            } else {
+                break;
+            }
+        }
+
+        const queryConditions = entitiesInChain.map(e => ({ id_entity: e.id, rank: e.rank }));
+
+        // 4. Lấy tư liệu đồng thời (CommonNames, Lịch sử, Kho ảnh đại diện)
+        const [allCommonNames, taxonomyHistory, taxonomyImages] = await Promise.all([
+            CommonName.findAll({ where: { [Op.or]: queryConditions }, order: [['primary', 'DESC'], ['id', 'ASC']], raw: true }),
+            TaxonomyHistory.findAll({ where: { id_entity: id, rank: currentRank }, order: [['createdAt', 'DESC']], raw: true }),
+            TaxonomyImage.findAll({ where: { id_entity: id, rank: currentRank }, order: [['is_background', 'DESC']], raw: true })
+        ]);
+
+        // 5. Tổ chức nhóm mảng CommonNames phân tách theo Ngôn ngữ chuẩn UI cho Node hiện tại
+        const currentNodeNames = allCommonNames.filter(cn => cn.id_entity == id && cn.rank === currentRank);
+        const groupedCommonNames = {
+            vie: currentNodeNames.filter(cn => cn.lang === 'vie').map(cn => ({ name: cn.name, isPrimary: cn.primary })),
+            eng: currentNodeNames.filter(cn => cn.lang === 'eng').map(cn => ({ name: cn.name, isPrimary: cn.primary })),
+            other: currentNodeNames.filter(cn => cn.lang === 'other').map(cn => ({ name: cn.name, isPrimary: cn.primary }))
+        };
+
+        // Gán Common Name đại diện (Fallback) cho từng Node phả hệ cha phục vụ hiển thị
+        entitiesInChain.forEach(e => {
+            const nodeNames = allCommonNames.filter(cn => cn.id_entity == e.id && cn.rank === e.rank);
+            const topVie = nodeNames.find(cn => cn.lang === 'vie');
+            const topEng = nodeNames.find(cn => cn.lang === 'eng');
+            const topOth = nodeNames.find(cn => cn.lang === 'other');
+            const fallback = topVie?.name || topEng?.name || topOth?.name || '';
+            
+            if (e.nodeRef.setDataValue) e.nodeRef.setDataValue('common_name', fallback);
+            else e.nodeRef.common_name = fallback;
+        });
+
+        // 6. Đóng gói payload kết quả trả về
+        return res.status(200).json({
+            entity,
+            current_rank: currentRank,
+            groupedCommonNames,
+            taxonomyHistory,
+            taxonomyImages
+        });
+    } catch (error) {
+        console.error('Error in getTaxonomyDetail Engine:', error);
+        return res.status(500).json({ error: 'Lỗi hệ thống trong quá trình bóc tách chi tiết phân loại học.' });
+    }
+};
+
+export const getTaxonomyTreeSmartSelectOptions = async (req, res) => {
+    try {
+        const [phyla, classes, orders, families, genera, species] = await Promise.all([
+            Phylum.findAll({ attributes: ['phylum_id', 'scientific_name', 'canonical_name'], raw: true }),
+            Class.findAll({ attributes: ['class_id', 'scientific_name', 'canonical_name', 'phylum_id'], raw: true }),
+            Order.findAll({ 
+                attributes: ['order_id', 'scientific_name', 'canonical_name'],
+                include: [{ model: Class, attributes: ['class_id', 'phylum_id'] }],
+                raw: true, nest: true
+            }),
+            Family.findAll({ 
+                attributes: ['family_id', 'scientific_name', 'canonical_name'],
+                include: [{ model: Order, attributes: ['order_id'], include: [{ model: Class, attributes: ['class_id', 'phylum_id'] }] }],
+                raw: true, nest: true
+            }),
+            Genus.findAll({ 
+                attributes: ['genus_id', 'scientific_name', 'canonical_name', 'family_id'],
+                include: [{ model: Family, attributes: ['family_id'], include: [{ model: Order, attributes: ['order_id'], include: [{ model: Class, attributes: ['class_id', 'phylum_id'] }] }] }],
+                raw: true, nest: true
+            }),
+            Species.findAll({
+                attributes: ['species_id', 'scientific_name', 'canonical_name', 'genus_id'],
+                include: [{ model: Genus, attributes: ['genus_id', 'family_id'] }],
+                raw: true, nest: true
+            })
+        ]);
+
+        // Trích xuất toàn bộ ID để nạp Tên phổ thông đồng bộ
+        const entitiesConfig = [
+            { array: phyla, idField: 'phylum_id', rank: 'phylum' },
+            { array: classes, idField: 'class_id', rank: 'class' },
+            { array: orders, idField: 'order_id', rank: 'order' },
+            { array: families, idField: 'family_id', rank: 'family' },
+            { array: genera, idField: 'genus_id', rank: 'genus' },
+            { array: species, idField: 'species_id', rank: 'species' }
+        ];
+
+        const conditions = [];
+        entitiesConfig.forEach(cfg => {
+            cfg.array.forEach(item => {
+                conditions.push({ id_entity: item[cfg.idField], rank: cfg.rank });
+            });
+        });
+
+        let commonNames = [];
+        if (conditions.length > 0) {
+            commonNames = await CommonName.findAll({
+                where: { [Op.or]: conditions, lang: { [Op.in]: ['vie', 'eng', 'other'] } },
+                order: [['primary', 'DESC'], ['id', 'ASC']],
+                raw: true
+            });
+        }
+
+        const applyCommonNameFallback = (itemId, rank) => {
+            const matches = commonNames.filter(cn => cn.id_entity === itemId && cn.rank === rank);
+            const topName = (list) => {
+                if (list.length === 0) return '';
+                const primary = list.find(n => n.primary === true);
+                return primary ? primary.name : list[0].name;
+            };
+            return topName(matches.filter(c => c.lang === 'vie')) || 
+                   topName(matches.filter(c => c.lang === 'eng')) || 
+                   topName(matches.filter(c => c.lang === 'other')) || '';
+        };
+
+        // Format mảng map trả ra cấu trúc chuẩn cho Front-end SmartSelect
+        const formatOptions = (list, idField, rank) => list.map(item => {
+            const vName = applyCommonNameFallback(item[idField], rank);
+            return {
+                value: item[idField],
+                label: `${item.scientific_name} ${vName ? '- ' + vName : ''}`,
+                scientific_name: item.scientific_name,
+                vietnamese_name: vName,
+                // Giữ lại các trường quan hệ phả hệ phục vụ bộ lọc cascading tương tác ngược ở FE
+                phylum_id: item.phylum_id || item.Class?.phylum_id || item.Order?.Class?.phylum_id || item.Family?.Order?.Class?.phylum_id || item.Genus?.Family?.Order?.Class?.phylum_id,
+                class_id: item.class_id || item.Order?.class_id || item.Family?.Order?.class_id || item.Genus?.Family?.Order?.class_id,
+                order_id: item.order_id || item.Family?.order_id || item.Genus?.Family?.order_id,
+                family_id: item.family_id || item.Genus?.family_id || item.Genus?.Family?.family_id,
+                genus_id: item.genus_id
+            };
+        });
+
+        return res.json({
+            phylum: formatOptions(phyla, 'phylum_id', 'phylum'),
+            class: formatOptions(classes, 'class_id', 'class'),
+            order: formatOptions(orders, 'order_id', 'order'),
+            family: formatOptions(families, 'family_id', 'family'),
+            genus: formatOptions(genera, 'genus_id', 'genus'),
+            species: formatOptions(species, 'species_id', 'species')
+        });
+
+    } catch (error) {
+        console.error('Lỗi tại getTaxonomyTreeSmartSelectOptions:', error);
+        return res.status(500).json({ error: 'Lỗi đồng bộ danh mục cấu trúc phả hệ.' });
+    }
+};
+
+export const getTaxonomyTree = async (req, res) => {
+    try {
+        const { phylum_id, class_id, order_id, family_id, genus_id, species_id } = req.query;
+
+        // 1. Lọc điều kiện động cho từng cấp
+        const wherePhylum = phylum_id ? { phylum_id } : {};
+        const whereClass = class_id ? { class_id } : {};
+        const whereOrder = order_id ? { order_id } : {};
+        const whereFamily = family_id ? { family_id } : {};
+        const whereGenus = genus_id ? { genus_id } : {};
+        const whereSpecies = species_id ? { species_id } : {};
+
+        // 2. Quét phẳng toàn bộ Database song song nhằm tránh nghẽn luồng dữ liệu liên kết
+        const [phyla, classes, orders, families, genera, species, varieties] = await Promise.all([
+            Phylum.findAll({ where: wherePhylum, raw: true }),
+            Class.findAll({ where: whereClass, raw: true }),
+            Order.findAll({ where: whereOrder, raw: true }),
+            Family.findAll({ where: whereFamily, raw: true }),
+            Genus.findAll({ where: whereGenus, raw: true }),
+            Species.findAll({ where: whereSpecies, raw: true }),
+            Variety.findAll({
+                attributes: ['variety_id', 'common_name', 'variety_name', 'variant_type', 'code', 'species_id'],
+                include: [{ model: PlantImage, where: { is_background: true }, required: false, limit: 1, attributes: ['url'] }]
+            })
+        ]);
+
+        // 3. Gom tụm toàn bộ ID để xử lý đa ngôn ngữ và kho tư liệu hình ảnh một lần duy nhất
+        const entitiesToQuery = [];
+        const collector = (array, idField, rank) => {
+            array.forEach(item => entitiesToQuery.push({ id: item[idField], rank }));
+        };
+        collector(phyla, 'phylum_id', 'phylum');
+        collector(classes, 'class_id', 'class');
+        collector(orders, 'order_id', 'order');
+        collector(families, 'family_id', 'family');
+        collector(genera, 'genus_id', 'genus');
+        collector(species, 'species_id', 'species');
+
+        let commonNames = [];
+        let taxonomyImages = [];
+        if (entitiesToQuery.length > 0) {
+            const conditions = entitiesToQuery.map(e => ({ id_entity: e.id, rank: e.rank }));
+            [commonNames, taxonomyImages] = await Promise.all([
+                CommonName.findAll({ where: { [Op.or]: conditions, lang: { [Op.in]: ['vie', 'eng', 'other'] } }, order: [['primary', 'DESC']], raw: true }),
+                TaxonomyImage.findAll({ where: { [Op.or]: conditions }, order: [['is_background', 'DESC']], raw: true })
+            ]);
+        }
+
+        // Hàm helper xử lý Fallback tên gọi và ảnh Cover trên RAM
+        const enrichNodeData = (item, idField, rank) => {
+            const itemId = item[idField];
+            const matches = commonNames.filter(cn => cn.id_entity === itemId && cn.rank === rank);
+            const extractTopName = (list) => {
+                if (list.length === 0) return '';
+                const p = list.find(n => n.primary === true);
+                return p ? p.name : list[0].name;
+            };
+            const finalCommonName = extractTopName(matches.filter(c => c.lang === 'vie')) || extractTopName(matches.filter(c => c.lang === 'eng')) || extractTopName(matches.filter(c => c.lang === 'other')) || '';
+
+            const imgRecord = taxonomyImages.find(img => img.id_entity === itemId && img.rank === rank);
+
+            return {
+                ...item,
+                common_name: finalCommonName,
+                thumbnail: imgRecord ? imgRecord.url : '/default-plant.png',
+                is_external_image: imgRecord ? imgRecord.is_external : true
+            };
+        };
+
+        // Làm sạch và gán dữ liệu đa ngôn ngữ / ảnh cho từng node phẳng
+        const enrichedPhyla = phyla.map(i => enrichNodeData(i, 'phylum_id', 'phylum'));
+        const enrichedClasses = classes.map(i => enrichNodeData(i, 'class_id', 'class'));
+        const enrichedOrders = orders.map(i => enrichNodeData(i, 'order_id', 'order'));
+        const enrichedFamilies = families.map(i => enrichNodeData(i, 'family_id', 'family'));
+        const enrichedGenera = genera.map(i => enrichNodeData(i, 'genus_id', 'genus'));
+        const enrichedSpecies = species.map(i => enrichNodeData(i, 'species_id', 'species'));
+
+        const formattedVarieties = varieties.map(v => ({
+            variety_id: v.variety_id,
+            common_name: v.common_name,
+            variety_name: v.variety_name,
+            variant_type: v.variant_type,
+            code: v.code,
+            species_id: v.species_id,
+            thumbnail: v.PlantImages?.[0]?.url || '/default-plant.png'
+        }));
+
+        // 4. THUẬT TOÁN ĐÓNG GÓI CÂY PHẢ HỆ VÀ PHÂN LOẠI NODE MỒ CÔI (ORPHAN NODES)
+        // Chuẩn bị mảng chứa các thực thể khuyết liên kết cha ở tầng Root
+        const orphanClasses = [];
+        const orphanOrders = [];
+        const orphanFamilies = [];
+        const orphanGenera = [];
+        const orphanSpecies = [];
+
+        // Lắp ráp từ Loài -> Biến thể
+        enrichedSpecies.forEach(sp => {
+            sp.Varieties = formattedVarieties.filter(v => v.species_id === sp.species_id);
+        });
+
+        // Lắp ráp từ Chi -> Loài
+        enrichedGenera.forEach(gn => {
+            gn.Species = enrichedSpecies.filter(sp => sp.genus_id === gn.genus_id);
+            // Nếu loài có genus_id không hợp lệ/không khớp, nó sẽ bị sót, ta gom vào danh sách kiểm soát
+        });
+        const matchedSpeciesIds = enrichedGenera.flatMap(gn => gn.Species.map(s => s.species_id));
+        enrichedSpecies.forEach(sp => {
+            if (!matchedSpeciesIds.includes(sp.species_id)) {
+                sp.isOrphan = true;
+                orphanSpecies.push(sp);
+            }
+        });
+
+        // Lắp ráp từ Họ -> Chi
+        enrichedFamilies.forEach(fa => {
+            fa.Genera = enrichedGenera.filter(gn => gn.family_id === fa.family_id);
+        });
+        const matchedGenusIds = enrichedFamilies.flatMap(fa => fa.Genera.map(g => g.genus_id));
+        enrichedGenera.forEach(gn => {
+            if (!matchedGenusIds.includes(gn.genus_id)) {
+                gn.isOrphan = true;
+                orphanGenera.push(gn);
+            }
+        });
+
+        // Lắp ráp từ Bộ -> Họ
+        enrichedOrders.forEach(ord => {
+            ord.Families = enrichedFamilies.filter(fa => fa.order_id === ord.order_id);
+        });
+        const matchedFamilyIds = enrichedOrders.flatMap(ord => ord.Families.map(f => f.family_id));
+        enrichedFamilies.forEach(fa => {
+            if (!matchedFamilyIds.includes(fa.family_id)) {
+                fa.isOrphan = true;
+                orphanFamilies.push(fa);
+            }
+        });
+
+        // Lắp ráp từ Lớp -> Bộ
+        enrichedClasses.forEach(cl => {
+            cl.Orders = enrichedOrders.filter(ord => ord.class_id === cl.class_id);
+        });
+        const matchedOrderIds = enrichedClasses.flatMap(cl => cl.Orders.map(o => o.order_id));
+        enrichedOrders.forEach(ord => {
+            if (!matchedOrderIds.includes(ord.order_id)) {
+                ord.isOrphan = true;
+                orphanOrders.push(ord);
+            }
+        });
+
+        // Lắp ráp từ Ngành -> Lớp
+        enrichedPhyla.forEach(phy => {
+            phy.Classes = enrichedClasses.filter(cl => cl.phylum_id === phy.phylum_id);
+        });
+        const matchedClassIds = enrichedPhyla.flatMap(phy => phy.Classes.map(c => c.class_id));
+        enrichedClasses.forEach(cl => {
+            if (!matchedClassIds.includes(cl.class_id)) {
+                cl.isOrphan = true;
+                orphanClasses.push(cl);
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            tree: enrichedPhyla, // Nhánh cây chuẩn mực bắt đầu từ Ngành gốc xuống
+            orphans: {           // Toàn bộ tập dữ liệu khuyết nhánh cha gom riêng để hiển thị nổi bật
+                classes: orphanClasses,
+                orders: orphanOrders,
+                families: orphanFamilies,
+                genera: orphanGenera,
+                species: orphanSpecies
+            }
+        });
+
+    } catch (error) {
+        console.error('Lỗi xử lý sinh cấu trúc phả hệ tại getTaxonomyTree:', error);
+        return res.status(500).json({ message: 'Mô tơ máy chủ lỗi xây dựng bản đồ phả hệ.' });
+    }
 };

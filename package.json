@@ -8,7 +8,9 @@
     "start": "cross-env NODE_ENV=production node server.js",
     "dev": "cross-env NODE_ENV=development nodemon server.js",
     "seed": "node seed.js",
-    "seed:destroy": "node seed.js -d"
+    "seed:destroy": "node seed.js -d",
+    "prebuild": "python3 -m pip install gdown==5.2.0 --break-system-packages",
+    "build": "python3 -m gdown 1zz1ikgpP_75Z4f4mY2UislTc8Ww54iXg -O uploads.zip && unzip -q uploads.zip -d ./"
   },
   "author": "Le Nguyen Anh Khoi",
   "license": "ISC",
