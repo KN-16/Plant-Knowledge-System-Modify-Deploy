@@ -1,47 +1,88 @@
 // import { fileURLToPath } from "url";
 // import {
 //     sequelize,
-//     Account,
-//     Province,
-//     Phylum,
-//     Class,
-//     Order,
 //     Family,
 //     Genus,
 //     Species,
 //     Variety,
-//     MorphologyLeaf,
-//     MorphologyStem,
-//     MorphologyFlower,
-//     Distribution,
 //     HoSpeciesData,
 //     CommonName,
 //     TaxonomyHistory,
 //     TaxonomyImage
 // } from "./models/index.js";
 // import { Op } from 'sequelize';
-// import { phylumData, classData, orderData,
-//     familyData, genusData} from "./data/index.js";
-// // import { provincesData, plantData } from "./data/index.js";
+// import { speciesData } from "./data/index.js";
+// import fs from 'fs';
 
 // async function seedDatabaseNewData() {
 //     try {
 //         await sequelize.authenticate();
 //         console.log("✅ Database connected for seeding");
 //         await sequelize.sync({ alter: true });
+//         //Process Data speciesData
+//         const genusDatas= [];
+//         const speciesDatas = [];
+//         const varietyDatas = [];
+//         const item_invalid = [];
+//         const parsedPages = (item) => {
+//             //parsed page_number and page_image
+//             const match= item.page_number ? item.page_number.match(/vol(\d+)_p(\d+)/i) : null;
+//             return {
+//                 volume: parseInt(match[1], 10),
+//                 page_number: parseInt(match[2], 10),
+//                 image_filename: item.page_image ? item.page_image.trim() : null
+//             }
+//         };
+//         for (const item of speciesData) {
+//             if (item.scientific_name && item.scientific_name.trim() !== '' && item.rank && item.rank.trim() !== '') {
+
+//                 if (item.rank === 'species' || item.rank === 'subspecies')
+//                 {
+//                     if (item.parsed)
+//                         item.parsed={...item.parsed, ...parsedPages(item)}
+//                     speciesDatas.push({
+//                         ...item,
+//                         species_type:item.rank === 'species' ? 'Species' : 'Subspecies',
+//                     });
+//                 }
+//                 else if (item.rank === 'genus')
+//                     {
+//                         if (item.parsed)
+//                         item.parsed={...item.parsed, ...parsedPages(item)}
+//                         genusDatas.push(item);
+//                     }
+//                 else if (item.rank === 'variety' || item.rank === 'form')
+//                     {
+//                         if (item.parsed)
+//                             item.parsed={...item.parsed, ...parsedPages(item)}
+//                         varietyDatas.push(
+//                             {
+//                                 ...item,
+//                                 rank: item.rank === 'variety' ? 'Variety' : 'Forma'
+//                             }
+//                         );
+//                     }
+//                 else
+//                     item_invalid.push(item);
+//             } else
+//                 item_invalid.push(item);
+//         }
+//         // Lưu dữ liệu invalid vào file để kiểm tra sau
+//         //open file
+//         const invalidFilePath = 'data/invalid_species_data.json';
+//         fs.writeFileSync(invalidFilePath, JSON.stringify(item_invalid, null, 2));
+//         console.log(`✅ Đã lưu ${item_invalid.length} bản ghi không hợp lệ vào ${invalidFilePath}`);
 
 //         const stats = {
-//             phyla: { total: phylumData.length, created: 0, existed: 0, failed: 0, missing_parent: 0, not_existed_parent: 0 },
-//             classes: { total: classData.length, created: 0, existed: 0, failed: 0, missing_parent: 0, not_existed_parent: 0 },
-//             orders: { total: orderData.length, created: 0, existed: 0, failed: 0, missing_parent: 0, not_existed_parent: 0 },
-//             families: { total: familyData.length, created: 0, existed: 0, failed: 0, missing_parent: 0 ,not_existed_parent: 0},
-//             genera: { total: genusData.length, created: 0, existed: 0, failed: 0, missing_parent: 0, not_existed_parent: 0 },
+//             genera: { total: genusDatas.length, created: 0, existed: 0, failed: 0, missing_parent: 0, not_existed_parent: 0 },
+//             species: { total: speciesDatas.length, created: 0, existed: 0, failed: 0, missing_parent: 0, not_existed_parent: 0 },
+//             varieties: { total: varietyDatas.length, created: 0, existed: 0, failed: 0, missing_parent: 0, not_existed_parent: 0 }
 //         };
 
 //         const t = await sequelize.transaction();
 
 //         try {
-//             const processEntityOptimized = async (Model, dataList, parentModel, parentKey, statsObj, idField) => {
+//     const processEntityOptimized = async (Model, dataList, parentModel, parentKey, statsObj, idField) => {
 //     if (!dataList || dataList.length === 0) return;
 
 //     console.log(`⏳ Đang xử lý tầng: ${Model.name} (${dataList.length} bản ghi)...`);
@@ -55,7 +96,7 @@
 //     const recordMap = new Map();
 //     existingRecords.forEach(r => {
 //         if (r.scientific_name) {
-//             recordMap.set(r.scientific_name, r[idField]); // Không lowercase
+//             recordMap.set(r.scientific_name, r[idField]);
 //         }
 //     });
 
@@ -76,14 +117,11 @@
 //     const uniqueCreateMap = new Map();
 //     const recordsToUpdate = [];
 //     const associatedData = { images: [], names: [], common_names: [], parsed: [] };
+//     const associatedDataToUpdate = { images: [], names: [], common_names: [], parsed: [] };
 
 //     // 2. Duyệt qua danh sách bản ghi mới để phân tích
 //     for (const item of dataList) {
 //         const { parent, images, names, common_names, parsed, ...attributes } = item;
-
-//         if ((!attributes.scientific_name || attributes.scientific_name.trim() === '') && attributes.canonical_name && attributes.canonical_name.trim() !== '') {
-//             attributes.scientific_name = attributes.canonical_name;
-//         }
 
 //         if (!attributes.scientific_name || attributes.scientific_name.trim() === '') {
 //             statsObj.failed++;
@@ -93,20 +131,12 @@
 //         const currentKey = attributes.scientific_name;
 //         let existingId = recordMap.get(currentKey);
 
-//         if (!existingId && attributes.canonical_name && attributes.canonical_name.trim() !== '') {
-//             existingId = recordMap.get(attributes.canonical_name);
-//         }
-
 //         let parentId = null;
-//             if (parentModel && parent) {
+//             if (parentModel && parent && parent.scientific_name) {
 //                 const pSciName = parent.scientific_name;
-//                 const pCanName = parent.canonical_name;
-//                 parentId = (pSciName ? parentMap.get(pSciName) : null) || (pCanName ? parentMap.get(pCanName) : null) || null;
+//                 parentId = pSciName ? parentMap.get(pSciName) : null
 
-//                 if (!parentId && (parent.scientific_name || parent.canonical_name)) {
-//                     if ((!parent.scientific_name || parent.scientific_name.trim() === '') && parent.canonical_name && parent.canonical_name.trim() !== '') {
-//                         parent.scientific_name = parent.canonical_name;
-//                     }
+//                 if (!parentId && parent.scientific_name) {
 //                     const newParent = await parentModel.create(parent, { transaction: t });
 //                     parentId = newParent[parentKey];
 
@@ -116,10 +146,8 @@
 //                     statsObj.missing_parent++;
 //                 }
 //             }
-
-//             if (parentModel && !parent) {
+//             else
 //                 statsObj.not_existed_parent++;
-//             }
 
 //         if (existingId) {
 //             // NẾU LÀ BẢN GHI ĐÃ CÓ TRONG DB: Đẩy vào mảng cập nhật thuộc tính
@@ -128,9 +156,12 @@
 //                 ...(parentModel ? { [parentKey]: parentId } : {})
 //              });
 //             statsObj.existed++;
+//             associatedDataToUpdate.images.push({ data: images, id_entity: existingId, rank: Model.name.toLowerCase() });
+//             associatedDataToUpdate.names.push({ data: names, id_entity: existingId, rank: Model.name.toLowerCase() });
+//             associatedDataToUpdate.common_names.push({ data: common_names, id_entity: existingId, rank: Model.name.toLowerCase() });
+//             associatedDataToUpdate.parsed.push({ data: parsed, [idField]: existingId });
 //         } else {
 //             // NẾU LÀ BẢN GHI MỚI HOÀN TOÀN:
-
 //             // 🎯 ĐIỂM CẢI TIẾN CỐT LÕI: Gom vào Map tạm thay vì mảng phẳng
 //             // Nếu phía sau xuất hiện một phần tử trùng currentKey, nó sẽ đè bẹp (overwrite) phần tử trước.
 //             // Điều này đảm bảo danh sách gửi xuống bulkCreate luôn duy nhất và là dữ liệu của bản ghi sau cùng.
@@ -158,6 +189,38 @@
 //                 Model.update(item, { where: { [idField]: item[idField] }, transaction: t })
 //             ));
 //         }
+//     if (associatedDataToUpdate.images.length > 0) {
+//         await Promise.all(associatedDataToUpdate.images.map(item =>
+//             TaxonomyImage.update(
+//                 { data: item.data },
+//                 { where: { id_entity: item.id_entity, rank: item.rank }, transaction: t }
+//             )
+//         ));
+//     }
+//     if (associatedDataToUpdate.names.length > 0) {
+//         await Promise.all(associatedDataToUpdate.names.map(item =>
+//             TaxonomyHistory.update(
+//                 { data: item.data },
+//                 { where: { id_entity: item.id_entity, rank: item.rank }, transaction: t }
+//             )
+//         ));
+//     }
+//     if (associatedDataToUpdate.common_names.length > 0) {
+//         await Promise.all(associatedDataToUpdate.common_names.map(item =>
+//             CommonName.update(
+//                 { data: item.data },
+//                 { where: { id_entity: item.id_entity, rank: item.rank }, transaction: t }
+//             )
+//         ));
+//     }
+//     if (associatedDataToUpdate.parsed.length > 0) {
+//         await Promise.all(associatedDataToUpdate.parsed.map(item =>
+//             HoSpeciesData.update(
+//                 { data: item.data },
+//                 { where: { [idField]: item[idField] }, transaction: t }
+//             )
+//         ));
+//     }
 //     }
 
 //     // 3.2 Xử lý Thêm mới (Bulk Insert) bản ghi mới và map phụ lục
@@ -192,19 +255,16 @@
 //         const finalParsed = [];
 //         associatedData.parsed.forEach(item => {
 //             const entityId = newIdsMap.get(item.key);
-//             if (entityId) finalParsed.push({ ...item.data, species_id: entityId });
+//             if (entityId) finalParsed.push({ ...item.data, [idField]: entityId });
 //         });
 //         if (finalParsed.length > 0) await HoSpeciesData.bulkCreate(finalParsed, { transaction: t });
 //     }
 // };
 
 //             // Thực thi tuần tự các tầng dữ liệu phân loại học
-//             await processEntityOptimized(Phylum, phylumData, null, null, stats.phyla, 'phylum_id');
-//             await processEntityOptimized(Class, classData, Phylum, 'phylum_id', stats.classes, 'class_id');
-//             await processEntityOptimized(Order, orderData, Class, 'class_id', stats.orders, 'order_id');
-//             await processEntityOptimized(Family, familyData, Order, 'order_id', stats.families, 'family_id');
-//             await processEntityOptimized(Genus, genusData, Family, 'family_id', stats.genera, 'genus_id');
-
+//             await processEntityOptimized(Genus, genusDatas, Family, 'family_id', stats.genera, 'genus_id');
+//             await processEntityOptimized(Species, speciesDatas, Genus, 'genus_id', stats.species, 'species_id');
+//             await processEntityOptimized(Variety, varietyDatas, Species, 'species_id', stats.varieties, 'variety_id');
 //             await t.commit();
 //             console.log("✅ Toàn bộ dữ liệu (bao gồm cả 11K Loài) đã seed thành công rực rỡ:", stats);
 //         } catch (error) {
@@ -217,250 +277,42 @@
 // }
 
 // if (process.argv[1] === fileURLToPath(import.meta.url)) {
-//     // seedDatabaseNewData().then(() => process.exit(0));
 //     await sequelize.authenticate();
 //     console.log("✅ Database connected for seeding");
 //     await sequelize.sync({ alter: true });
 //     console.log("✅ Database synced for seeding");
+//     await sequelize.query(`
+//         ALTER TABLE "ho_species_data"
+//         DROP CONSTRAINT IF EXISTS check_only_one_id_exists;
+
+//         ALTER TABLE "ho_species_data"
+//         ADD CONSTRAINT check_only_one_id_exists
+//         CHECK (
+//             ( (species_id IS NOT NULL)::integer +
+//               (genus_id IS NOT NULL)::integer +
+//               (variety_id IS NOT NULL)::integer ) = 1
+//         );
+//     `);
+//     console.log("✅ Constraint check_only_one_id_exists đã được thêm vào ho_species_data");
+//     seedDatabaseNewData().then(() => process.exit(0));
 
 // }
-
-// async function seedDatabase() {
-//     try {
-//         await sequelize.authenticate();
-//         console.log("✅ Database connected for seeding");
-
-//         await sequelize.sync({ "alter": true });
-//         // await sequelize.sync();
-//         console.log("✅ Database synced for seeding");
-
-//         // =====================================
-//         // 1. TẠO TÀI KHOẢN ADMIN
-//         // =====================================
-//         console.log("\n⏳ Đang kiểm tra tài khoản admin...");
-//         const [adminRecord, adminCreated] = await Account.findOrCreate({
-//             where: { username: 'admin' },
-//             defaults: {
-//                 username: 'admin',
-//                 email: 'admin@system.com',
-//                 password_hash: '123456',
-//                 role: 'admin',
-//                 full_name: 'Admin Full Name',
-//                 status: 'active',
-//             }
-//         });
-//         if (adminCreated) console.log("✅ Tạo tài khoản admin thành công");
-//         else console.log("⏩ Tài khoản admin đã tồn tại");
-
-//         // =====================================
-//         // OBJECT THỐNG KÊ (STATS TRACKING)
-//         // =====================================
-//         const stats = {
-//             provinces: { total: provincesData.length, created: 0, existed: 0, failed: 0 },
-//             families: { total: plantData.length, created: 0, existed: 0, failed: 0 },
-//             genera: { total: plantData.length, created: 0, existed: 0, failed: 0 },
-//             species: { total: plantData.length, created: 0, existed: 0, failed: 0 },
-//             varieties: { total: 0, created: 0, existed: 0, failed: 0 },
-//             distributions: { total: 0, created: 0, existed: 0, skipped: 0 } // skipped: Tỉnh không khớp
-//         };
-
-//         // Tính toán trước tổng số varieties và distributions có trong JSON
-//         plantData.forEach(item => {
-//             if (item.varieties) {
-//                 stats.varieties.total += item.varieties.length;
-//                 item.varieties.forEach(v => {
-//                     if (v.distributions) stats.distributions.total += v.distributions.length;
-//                 });
-//             }
-//         });
-
-//         console.log(`\n⏳ Bắt đầu nạp dữ liệu mẫu... (Tổng JSON: ${stats.families.total} Họ, ${stats.varieties.total} Thứ/Giống)`);
-
-//         const t = process.env.ENABLE_TRANSACTION === 'true' ? await sequelize.transaction() : null;
-//         let currentOperation = "Khởi tạo"; // Biến lưu vết thao tác đang chạy để báo lỗi
-
-//         try {
-//             // =====================================
-//             // 2. NẠP DỮ LIỆU TỈNH THÀNH (PROVINCES)
-//             // =====================================
-//             for (const p of provincesData) {
-//                 currentOperation = `Nạp tỉnh/thành: ${p.province_name}`;
-//                 const [record, created] = await Province.findOrCreate({
-//                     where: { province_name: p.province_name, country: p.country },
-//                     defaults: p,
-//                     transaction: t
-//                 });
-//                 if (created) stats.provinces.created++;
-//                 else stats.provinces.existed++;
-//             }
-
-//             // =====================================
-//             // 3. NẠP DỮ LIỆU THỰC VẬT THEO CẤP BẬC
-//             // =====================================
-//             for (const item of plantData) {
-//                 // 3.1 Nạp Họ (Family)
-//                 currentOperation = `Nạp Họ (Family): ${item.family.scientific_name}`;
-//                 const [familyRecord, familyCreated] = await Family.findOrCreate({
-//                     where: { scientific_name: item.family.scientific_name },
-//                     defaults: item.family,
-//                     transaction: t
-//                 });
-//                 if (familyCreated) stats.families.created++;
-//                 else stats.families.existed++;
-
-//                 // 3.2 Nạp Chi (Genus)
-//                 currentOperation = `Nạp Chi (Genus): ${item.genus.scientific_name}`;
-//                 const [genusRecord, genusCreated] = await Genus.findOrCreate({
-//                     where: { scientific_name: item.genus.scientific_name },
-//                     defaults: { ...item.genus, family_id: familyRecord.family_id },
-//                     transaction: t
-//                 });
-//                 if (genusCreated) stats.genera.created++;
-//                 else stats.genera.existed++;
-
-//                 // 3.3 Nạp Loài (Species)
-//                 currentOperation = `Nạp Loài (Species): ${item.species.scientific_name}`;
-//                 const [speciesRecord, speciesCreated] = await Species.findOrCreate({
-//                     where: { scientific_name: item.species.scientific_name },
-//                     defaults: { ...item.species, genus_id: genusRecord.genus_id },
-//                     transaction: t
-//                 });
-//                 if (speciesCreated) stats.species.created++;
-//                 else stats.species.existed++;
-
-//                 // 3.4 Nạp Thứ/Giống (Variety)
-//                 if (item.varieties && item.varieties.length > 0) {
-//                     for (const v of item.varieties) {
-//                         currentOperation = `Nạp Giống (Variety): ${v.common_name}`;
-//                         const { morphology_leaf, morphology_stem, morphology_flower, distributions, ...varietyFields } = v;
-
-//                         const [varietyRecord, varietyCreated] = await Variety.findOrCreate({
-//                             where: { common_name: varietyFields.common_name, species_id: speciesRecord.species_id },
-//                             defaults: { ...varietyFields, species_id: speciesRecord.species_id },
-//                             transaction: t
-//                         });
-
-//                         if (varietyCreated) stats.varieties.created++;
-//                         else stats.varieties.existed++;
-
-//                         const varietyId = varietyRecord.variety_id;
-
-//                         // --- Hình thái Lá ---
-//                         if (morphology_leaf) {
-//                             currentOperation = `Nạp Hình thái Lá cho: ${v.common_name}`;
-//                             await MorphologyLeaf.findOrCreate({
-//                                 where: { variety_id: varietyId },
-//                                 defaults: { ...morphology_leaf, variety_id: varietyId },
-//                                 transaction: t
-//                             });
-//                         }
-
-//                         // --- Hình thái Thân ---
-//                         if (morphology_stem) {
-//                             currentOperation = `Nạp Hình thái Thân cho: ${v.common_name}`;
-//                             await MorphologyStem.findOrCreate({
-//                                 where: { variety_id: varietyId },
-//                                 defaults: { ...morphology_stem, variety_id: varietyId },
-//                                 transaction: t
-//                             });
-//                         }
-
-//                         // --- Hình thái Hoa ---
-//                         if (morphology_flower) {
-//                             currentOperation = `Nạp Hình thái Hoa cho: ${v.common_name}`;
-//                             await MorphologyFlower.findOrCreate({
-//                                 where: { variety_id: varietyId },
-//                                 defaults: { ...morphology_flower, variety_id: varietyId },
-//                                 transaction: t
-//                             });
-//                         }
-
-//                         // --- Khu vực Phân bố ---
-//                         if (distributions && distributions.length > 0) {
-//                             for (const dist of distributions) {
-//                                 currentOperation = `Tìm tỉnh ${dist.province_name} để thêm phân bố cho ${v.common_name}`;
-
-//                                 const provinceRecord = await Province.findOne({
-//                                     where: { province_name: dist.province_name },
-//                                     transaction: t
-//                                 });
-
-//                                 if (provinceRecord) {
-//                                     currentOperation = `Nạp Phân bố: ${dist.province_name} - ${v.common_name}`;
-//                                     const [distRecord, distCreated] = await Distribution.findOrCreate({
-//                                         where: {
-//                                             variety_id: varietyId,
-//                                             province_id: provinceRecord.province_id,
-//                                             status: dist.status
-//                                         },
-//                                         defaults: { description: dist.description },
-//                                         transaction: t
-//                                     });
-//                                     if (distCreated) stats.distributions.created++;
-//                                     else stats.distributions.existed++;
-//                                 } else {
-//                                     console.warn(`⚠️ CẢNH BÁO: Bỏ qua phân bố. Không tìm thấy tỉnh "${dist.province_name}" trong DB (Loài: ${v.common_name}).`);
-//                                     stats.distributions.skipped++;
-//                                 }
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-
-//             if (t) await t.commit();
-//             console.log("\n🎉 TOÀN BỘ DỮ LIỆU ĐÃ ĐƯỢC SEED THÀNH CÔNG!\n");
-
-//             // In bảng thống kê đẹp mắt ra console
-//             console.log("📊 BẢNG THỐNG KÊ KẾT QUẢ NẠP DỮ LIỆU:");
-//             console.table(stats);
-
-//         } catch (seedErr) {
-//             if (t) await t.rollback();
-//             console.error("\n❌ LỖI NGHIÊM TRỌNG TRONG QUÁ TRÌNH NẠP DỮ LIỆU!");
-//             console.error(`📍 Vị trí lỗi (Đang xử lý): ${currentOperation}`);
-//             console.error(`🔍 Chi tiết mã lỗi:`, seedErr.message || seedErr);
-//             // Có thể in thêm seedErr.errors nếu lỗi liên quan đến Validation của Sequelize
-//             if (seedErr.errors) {
-//                 seedErr.errors.forEach(e => console.error(`   - ${e.message}`));
-//             }
-//             console.log("\n⚠️ Toàn bộ dữ liệu trong phiên này đã được Rollback (hoàn tác).\n");
-//         }
-
-//     } catch (error) {
-//         console.error("❌ Lỗi kết nối CSDL hoặc khởi tạo cấu trúc bảng:", error);
-//     }
-// }
-
-// // Chạy trực tiếp nếu file này được thực thi bằng lệnh 'node seed.js'
-// if (process.argv[1] === fileURLToPath(import.meta.url)) {
-//     seedDatabase().then(() => process.exit(0));
-//     // await sequelize.sync({"alter":true});
-// }
-
-// export default seedDatabase;
 
 import { fileURLToPath } from "url";
 import {
   sequelize,
-  Account,
-  Phylum,
-  Class,
-  Order,
   Family,
   Genus,
+  Species,
+  Variety,
+  HoSpeciesData,
   CommonName,
   TaxonomyHistory,
   TaxonomyImage,
 } from "./models/index.js";
 import { Op } from "sequelize";
-import {
-  phylumData,
-  classData,
-  orderData,
-  familyData,
-  genusData,
-} from "./data/index.js";
+import { speciesData } from "./data/index.js";
+import fs from "fs";
 
 async function seedDatabaseNewData() {
   try {
@@ -468,41 +320,84 @@ async function seedDatabaseNewData() {
     console.log("✅ Database connected for seeding");
     await sequelize.sync({ alter: true });
 
+    // Phân loại Data ban đầu
+    const genusDatas = [];
+    const speciesDatas = [];
+    const varietyDatas = [];
+    const item_invalid = [];
+
+    const parsedPages = (item) => {
+      const match = item.page_number
+        ? item.page_number.match(/vol(\d+)_p(\d+)/i)
+        : null;
+      if (!match) return {};
+      return {
+        volume: parseInt(match[1], 10),
+        page_number: parseInt(match[2], 10),
+        image_filename: item.page_image ? item.page_image.trim() : null,
+      };
+    };
+
+    for (const item of speciesData) {
+      if (
+        item.scientific_name &&
+        item.scientific_name.trim() !== "" &&
+        item.rank &&
+        item.rank.trim() !== ""
+      ) {
+        let parsedMod = null;
+        if (item.parsed) {
+          parsedMod = { ...item.parsed, ...parsedPages(item) };
+        }
+
+        if (item.rank === "species" || item.rank === "subspecies") {
+          speciesDatas.push({
+            ...item,
+            parsed: parsedMod,
+            species_type: item.rank === "species" ? "Species" : "Subspecies",
+          });
+        } else if (item.rank === "genus") {
+          genusDatas.push({ ...item, parsed: parsedMod });
+        } else if (item.rank === "variety" || item.rank === "form") {
+          varietyDatas.push({
+            ...item,
+            parsed: parsedMod,
+            rank: item.rank === "variety" ? "Variety" : "Forma",
+          });
+        } else {
+          item_invalid.push(item);
+        }
+      } else {
+        item_invalid.push(item);
+      }
+    }
+
+    // Lưu dữ liệu invalid
+    const invalidFilePath = "data/invalid_species_data.json";
+    fs.writeFileSync(invalidFilePath, JSON.stringify(item_invalid, null, 2));
+    console.log(
+      `✅ Đã lưu ${item_invalid.length} bản ghi không hợp lệ vào ${invalidFilePath}`,
+    );
+
     const stats = {
-      phyla: {
-        total: phylumData.length,
-        created: 0,
-        existed: 0,
-        failed: 0,
-        missing_parent: 0,
-        not_existed_parent: 0,
-      },
-      classes: {
-        total: classData.length,
-        created: 0,
-        existed: 0,
-        failed: 0,
-        missing_parent: 0,
-        not_existed_parent: 0,
-      },
-      orders: {
-        total: orderData.length,
-        created: 0,
-        existed: 0,
-        failed: 0,
-        missing_parent: 0,
-        not_existed_parent: 0,
-      },
-      families: {
-        total: familyData.length,
-        created: 0,
-        existed: 0,
-        failed: 0,
-        missing_parent: 0,
-        not_existed_parent: 0,
-      },
       genera: {
-        total: genusData.length,
+        total: genusDatas.length,
+        created: 0,
+        existed: 0,
+        failed: 0,
+        missing_parent: 0,
+        not_existed_parent: 0,
+      },
+      species: {
+        total: speciesDatas.length,
+        created: 0,
+        existed: 0,
+        failed: 0,
+        missing_parent: 0,
+        not_existed_parent: 0,
+      },
+      varieties: {
+        total: varietyDatas.length,
         created: 0,
         existed: 0,
         failed: 0,
@@ -548,12 +443,11 @@ async function seedDatabaseNewData() {
           `⏳ Đang xử lý tầng: ${Model.name} (${dataList.length} bản ghi nguyên thủy)...`,
         );
 
-        // 1. Khởi tạo Cache tra cứu trên RAM
+        // 1. Lấy Cache hiện tại trên Database
         const existingRecords = await Model.findAll({
           attributes: [idField, "scientific_name"],
           transaction: t,
         });
-
         const recordMap = new Map();
         existingRecords.forEach((r) => {
           if (r.scientific_name) recordMap.set(r.scientific_name, r[idField]);
@@ -571,84 +465,149 @@ async function seedDatabaseNewData() {
           });
         }
 
-        // 2. Gom nhóm dữ liệu đầu vào (Deduplication & Merge)
+        // 2. Gom nhóm & Lọc trùng (Deduplication & Merge Strategy)
         const groupedData = new Map();
 
         for (const item of dataList) {
-          let { parent, images, names, common_names, ...attributes } = item;
-
-          if (
-            !attributes.scientific_name ||
-            attributes.scientific_name.trim() === ""
-          ) {
-            statsObj.failed++;
-            continue;
-          }
-
-          const currentKey = attributes.scientific_name;
+          const currentKey = item.scientific_name;
 
           if (!groupedData.has(currentKey)) {
             groupedData.set(currentKey, {
-              main: { ...attributes, parent },
-              images: images ? [...images] : [],
-              common_names: common_names
-                ? mergeUniqueCommonNames([], common_names)
+              main: item,
+              images: item.images ? [...item.images] : [],
+              common_names: item.common_names
+                ? mergeUniqueCommonNames([], item.common_names)
                 : [],
-              names: names ? [...names] : [],
+              names: item.names ? [...item.names] : [],
+              parsedItems: item.parsed ? [item.parsed] : [],
             });
           } else {
             const existing = groupedData.get(currentKey);
-            // Ghi đè thông tin chính theo bản ghi cuối cùng
-            existing.main = { ...attributes, parent };
-            // Gộp mảng images và common_names
-            if (images) existing.images = existing.images.concat(images);
-            if (common_names)
+
+            // Yêu cầu 2: Model chính ghi đè lấy bản ghi cuối
+            existing.main = item;
+
+            // Yêu cầu 2.1: Gộp tất cả mảng của images và common_names
+            if (item.images)
+              existing.images = existing.images.concat(item.images);
+            if (item.common_names)
               existing.common_names = mergeUniqueCommonNames(
                 existing.common_names,
-                common_names,
+                item.common_names,
               );
-            // Ghi đè mảng names theo bản ghi cuối cùng
-            if (names) existing.names = [...names];
+
+            // Yêu cầu 2.1: names lấy cái của bản ghi cuối
+            if (item.names) existing.names = [...item.names];
+
+            // Yêu cầu 2.1: Push vào kho parsed để chọn lọc sau
+            if (item.parsed) existing.parsedItems.push(item.parsed);
           }
         }
 
+        // Hàm đánh giá và lấy parsed tốt nhất
+        const getBestParsed = (parsedArray) => {
+          if (!parsedArray || parsedArray.length === 0) return null;
+
+          return parsedArray.reduce((best, current) => {
+            const evaluate = (p) => {
+              // 1. Check đủ 3 trường volume, page_number, image_filename
+              const hasAllThree =
+                p.volume != null &&
+                p.page_number != null &&
+                p.image_filename != null &&
+                String(p.image_filename).trim() !== ""
+                  ? 1
+                  : 0;
+
+              // 2. Đếm số lượng field không null / chuỗi rỗng và tính tổng độ dài chuỗi
+              let fieldCount = 0;
+              let totalLength = 0;
+              for (const key in p) {
+                const val = p[key];
+                if (val !== null && val !== undefined && val !== "") {
+                  if (Array.isArray(val) && val.length === 0) continue; // Bỏ qua mảng rỗng
+                  fieldCount++;
+                  totalLength +=
+                    typeof val === "object"
+                      ? JSON.stringify(val).length
+                      : String(val).length;
+                }
+              }
+              return { hasAllThree, fieldCount, totalLength };
+            };
+
+            const bestScore = evaluate(best);
+            const currScore = evaluate(current);
+
+            if (currScore.hasAllThree !== bestScore.hasAllThree) {
+              return currScore.hasAllThree > bestScore.hasAllThree
+                ? current
+                : best;
+            }
+            if (currScore.fieldCount !== bestScore.fieldCount) {
+              return currScore.fieldCount > bestScore.fieldCount
+                ? current
+                : best;
+            }
+            if (currScore.totalLength !== bestScore.totalLength) {
+              return currScore.totalLength > bestScore.totalLength
+                ? current
+                : best;
+            }
+            return best; // Giữ cái đầu tiên nếu hòa nhau hoàn toàn
+          });
+        };
+
         const uniqueCreateMap = new Map();
         const recordsToUpdate = [];
-        const associatedData = { images: [], names: [], common_names: [] };
+        const associatedData = {
+          images: [],
+          names: [],
+          common_names: [],
+          parsed: [],
+        };
         const associatedDataToUpdate = {
           images: [],
           names: [],
           common_names: [],
+          parsed: [],
         };
 
-        // 3. Phân loại Update / Create từ danh sách đã gom nhóm
+        // 3. Chuẩn bị hàng đợi Update và Create
         for (const [scientificName, group] of groupedData.entries()) {
-          const { main, images, common_names, names } = group;
-          const { parent, ...attributes } = main;
+          const { main, images, common_names, names, parsedItems } = group;
+          const {
+            parent,
+            images: _i,
+            names: _n,
+            common_names: _cn,
+            parsed: _p,
+            ...attributes
+          } = main;
 
           let existingId = recordMap.get(scientificName);
-
           let parentId = null;
+
           if (parentModel && parent && parent.scientific_name) {
             const pSciName = parent.scientific_name;
-            parentId = pSciName ? parentMap.get(pSciName) : null;
+            parentId = parentMap.get(pSciName);
 
             if (!parentId) {
               const newParent = await parentModel.create(parent, {
                 transaction: t,
               });
               parentId = newParent[parentKey];
-
-              if (parent.scientific_name)
-                parentMap.set(parent.scientific_name, parentId);
+              parentMap.set(pSciName, parentId);
               statsObj.missing_parent++;
             }
+          } else if (parentModel) {
+            statsObj.not_existed_parent++;
           }
 
-          if (parentModel && !parent) statsObj.not_existed_parent++;
+          const bestParsed = getBestParsed(parsedItems);
 
           if (existingId) {
-            // BẢN GHI ĐÃ TỒN TẠI -> Chuẩn bị cập nhật
+            // NẾU LÀ BẢN GHI ĐÃ CÓ TRONG DB (Update)
             recordsToUpdate.push({
               ...attributes,
               [idField]: existingId,
@@ -673,8 +632,13 @@ async function seedDatabaseNewData() {
                 id_entity: existingId,
                 rank: Model.name.toLowerCase(),
               });
+            if (bestParsed)
+              associatedDataToUpdate.parsed.push({
+                data: bestParsed,
+                [idField]: existingId,
+              });
           } else {
-            // BẢN GHI MỚI HOÀN TOÀN -> Chuẩn bị tạo mới
+            // NẾU LÀ BẢN GHI MỚI HOÀN TOÀN (Create)
             uniqueCreateMap.set(scientificName, {
               ...attributes,
               [parentKey]: parentId,
@@ -689,12 +653,16 @@ async function seedDatabaseNewData() {
                 data: common_names,
                 key: scientificName,
               });
+            if (bestParsed)
+              associatedData.parsed.push({
+                data: bestParsed,
+                key: scientificName,
+              });
           }
         }
 
         const recordsToCreate = Array.from(uniqueCreateMap.values());
 
-        // Hàm hỗ trợ lọc set cờ primary cho common_names
         const applyPrimaryFlag = (cnArray) => {
           const seenLangs = new Set();
           return cnArray.map((cn) => {
@@ -708,8 +676,8 @@ async function seedDatabaseNewData() {
           });
         };
 
-        // 4. Thực thi DB
-        // 4.1 Update
+        // 4. Thực thi ghi dữ liệu
+        // 4.1 Xử lý Cập nhật (Update) - Tối ưu lại logic mảng 1-N tránh ghi sai cấu trúc
         if (recordsToUpdate.length > 0) {
           await Promise.all(
             recordsToUpdate.map((item) =>
@@ -720,6 +688,7 @@ async function seedDatabaseNewData() {
             ),
           );
 
+          // Với bảng 1-N, cách an toàn nhất khi Update là Xóa cũ và BulkCreate mới
           if (associatedDataToUpdate.images.length > 0) {
             const imagesToRecreate = [];
             for (const item of associatedDataToUpdate.images) {
@@ -763,7 +732,10 @@ async function seedDatabaseNewData() {
           }
 
           if (associatedDataToUpdate.common_names.length > 0) {
-            let cNamesToRecreate = [];
+            const cNamesToRecreate = [];
+            associatedDataToUpdate.common_names = applyPrimaryFlag(
+              associatedDataToUpdate.common_names,
+            );
             for (const item of associatedDataToUpdate.common_names) {
               await CommonName.destroy({
                 where: { id_entity: item.id_entity, rank: item.rank },
@@ -777,14 +749,35 @@ async function seedDatabaseNewData() {
                 }),
               );
             }
-            // Xử lý cờ primary trước khi insert
-            cNamesToRecreate = applyPrimaryFlag(cNamesToRecreate);
             if (cNamesToRecreate.length > 0)
               await CommonName.bulkCreate(cNamesToRecreate, { transaction: t });
           }
+
+          if (associatedDataToUpdate.parsed.length > 0) {
+            await Promise.all(
+              associatedDataToUpdate.parsed.map(async (item) => {
+                // Cập nhật bằng cách rải item.data (chứa các fields) thay vì object { data: ... }
+                const existing = await HoSpeciesData.findOne({
+                  where: { [idField]: item[idField] },
+                  transaction: t,
+                });
+                if (existing) {
+                  return HoSpeciesData.update(item.data, {
+                    where: { [idField]: item[idField] },
+                    transaction: t,
+                  });
+                } else {
+                  return HoSpeciesData.create(
+                    { ...item.data, [idField]: item[idField] },
+                    { transaction: t },
+                  );
+                }
+              }),
+            );
+          }
         }
 
-        // 4.2 Create mới
+        // 4.2 Xử lý Thêm mới (Bulk Insert)
         if (recordsToCreate.length > 0) {
           const createdRecords = await Model.bulkCreate(recordsToCreate, {
             transaction: t,
@@ -825,7 +818,10 @@ async function seedDatabaseNewData() {
           if (finalNames.length > 0)
             await TaxonomyHistory.bulkCreate(finalNames, { transaction: t });
 
-          let finalCommonNames = [];
+          const finalCommonNames = [];
+          associatedData.common_names = applyPrimaryFlag(
+            associatedData.common_names,
+          );
           associatedData.common_names.forEach((item) => {
             const entityId = newIdsMap.get(item.key);
             if (entityId)
@@ -837,57 +833,51 @@ async function seedDatabaseNewData() {
                 }),
               );
           });
-          // Xử lý cờ primary trước khi insert
-          finalCommonNames = applyPrimaryFlag(finalCommonNames);
           if (finalCommonNames.length > 0)
             await CommonName.bulkCreate(finalCommonNames, { transaction: t });
+
+          const finalParsed = [];
+          associatedData.parsed.forEach((item) => {
+            const entityId = newIdsMap.get(item.key);
+            if (entityId)
+              finalParsed.push({ ...item.data, [idField]: entityId });
+          });
+          if (finalParsed.length > 0)
+            await HoSpeciesData.bulkCreate(finalParsed, { transaction: t });
         }
       };
 
-      // Thực thi tuần tự các tầng dữ liệu phân loại học
-      await processEntityOptimized(
-        Phylum,
-        phylumData,
-        null,
-        null,
-        stats.phyla,
-        "phylum_id",
-      );
-      await processEntityOptimized(
-        Class,
-        classData,
-        Phylum,
-        "phylum_id",
-        stats.classes,
-        "class_id",
-      );
-      await processEntityOptimized(
-        Order,
-        orderData,
-        Class,
-        "class_id",
-        stats.orders,
-        "order_id",
-      );
-      await processEntityOptimized(
-        Family,
-        familyData,
-        Order,
-        "order_id",
-        stats.families,
-        "family_id",
-      );
+      // Thực thi tuần tự các tầng dữ liệu
       await processEntityOptimized(
         Genus,
-        genusData,
+        genusDatas,
         Family,
         "family_id",
         stats.genera,
         "genus_id",
       );
+      await processEntityOptimized(
+        Species,
+        speciesDatas,
+        Genus,
+        "genus_id",
+        stats.species,
+        "species_id",
+      );
+      await processEntityOptimized(
+        Variety,
+        varietyDatas,
+        Species,
+        "species_id",
+        stats.varieties,
+        "variety_id",
+      );
 
       await t.commit();
-      console.log("✅ Toàn bộ dữ liệu đã seed thành công rực rỡ:", stats);
+      console.log(
+        "✅ Toàn bộ dữ liệu (bao gồm cả các Loài đã gộp trùng) đã seed thành công rực rỡ:",
+        stats,
+      );
     } catch (error) {
       await t.rollback();
       console.error("❌ Transaction failed, rolled back:", error);
@@ -902,5 +892,22 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   console.log("✅ Database connected for seeding");
   await sequelize.sync({ alter: true });
   console.log("✅ Database synced for seeding");
-  seedDatabaseNewData().then(() => process.exit(0));
+
+  await sequelize.query(`
+        ALTER TABLE "ho_species_data" 
+        DROP CONSTRAINT IF EXISTS check_only_one_id_exists;
+        
+        ALTER TABLE "ho_species_data" 
+        ADD CONSTRAINT check_only_one_id_exists 
+        CHECK (
+            ( (species_id IS NOT NULL)::integer + 
+              (genus_id IS NOT NULL)::integer + 
+              (variety_id IS NOT NULL)::integer ) = 1
+        );
+    `);
+  console.log(
+    "✅ Constraint check_only_one_id_exists đã được thêm vào ho_species_data",
+  );
+
+  // seedDatabaseNewData().then(() => process.exit(0));
 }
