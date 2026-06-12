@@ -71,7 +71,7 @@ const Account = sequelize.define(
       { unique: true, fields: ["username"] },
       { unique: true, fields: ["email"] },
     ],
-  }
+  },
 );
 
 /* =========================
@@ -82,7 +82,7 @@ Account.beforeValidate(async (account, options) => {
   // Chỉ tạo code nếu chưa có (để tránh ghi đè khi update hoặc nếu đã truyền tay)
   if (!account.code) {
     let transaction = options.transaction || null;
-    account.code = await generateCustomId('Account', 'ACC', transaction);
+    account.code = await generateCustomId("Account", "ACC", transaction);
   }
 });
 Account.beforeCreate(async (account) => {

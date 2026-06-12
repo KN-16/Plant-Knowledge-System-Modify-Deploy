@@ -2,93 +2,143 @@
 
 /* Utilities */
 .transition-all {
-    transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
 }
 
 .tracking-wider {
-    letter-spacing: 0.05em;
+  letter-spacing: 0.05em;
 }
 
 .cursor-pointer {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 /* Hover effects */
 .hover-bg-white:hover {
-    background-color: #ffffff !important;
-    color: #198754 !important;
+  background-color: #ffffff !important;
+  color: #198754 !important;
 }
 
 .hover-text-success:hover {
-    color: #198754 !important;
+  color: #198754 !important;
 }
 
 .hover-bg-success-light:hover {
-    background-color: rgba(25, 135, 84, 0.1) !important;
+  background-color: rgba(25, 135, 84, 0.1) !important;
 }
 
 /* Text Shadows */
 .text-shadow {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .text-shadow-lg {
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
 }
 
 /* Search Bar Styling */
 .search-bar-container {
-    border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .search-bar-container:focus-within {
-    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2) !important;
-    transform: translateY(-2px);
-    border-color: #198754;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-2px);
+  border-color: #198754;
 }
 
 .search-bar-container input:focus {
-    outline: none;
-    box-shadow: none;
-    background-color: transparent !important;
+  outline: none;
+  box-shadow: none;
+  background-color: transparent !important;
 }
 
 /* Fix kích thước nút camera trên mobile */
 @media (max-width: 576px) {
-    .btn-camera {
-        width: 40px !important;
-        height: 40px !important;
-        padding: 0 !important;
-    }
+  .btn-camera {
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+  }
 
-    .hero-content h1 {
-        font-size: 2.5rem;
-    }
+  .hero-content h1 {
+    font-size: 2.5rem;
+  }
 }
 
 /* Stat Cards */
+/* Tải lại thiết kế cho thẻ chứa chỉ số */
 .stat-card {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(0, 0, 0, 0.03) !important;
 }
 
+/* Hiệu ứng trồi lên và đổ bóng mịn dạng lơ lửng khi rê chuột */
 .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.08) !important;
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(25, 135, 84, 0.08) !important; /* Đổ bóng sắc xanh lá siêu nhẹ quý phái */
+  background-color: #ffffff !important;
+}
+
+/* Định dạng khối tròn bao bọc Icon */
+.stat-icon-wrapper {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 1.15rem; /* Kích thước icon cân đối thị giác */
+}
+
+/* Tạo chuyển động xoay nhẹ / phóng to vòng tròn Icon khi thẻ cha được Hover */
+.stat-card:hover .stat-icon-wrapper {
+  transform: scale(1.1) rotate(5deg);
 }
 
 /* Animations */
 @keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
 
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-8px);
-    }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .animate-bounce {
-    animation: bounce 2s infinite ease-in-out;
+  animation: bounce 2s infinite ease-in-out;
+}
+
+/* Nâng cấp hiệu ứng Glassmorphism cho cẩm năng hướng dẫn */
+#huong-dan {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35) !important;
+}
+
+#huong-dan:hover {
+  border-color: rgba(25, 135, 84, 0.8) !important;
+  transform: translateY(-2px);
+}
+
+/* Định dạng mã code định danh trong hướng dẫn trông chuyên nghiệp hơn */
+#huong-dan code {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffc107;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Tối ưu khoảng cách hiển thị mượt mà khi xem trên Mobile */
+@media (max-width: 767.98px) {
+  #huong-dan {
+    padding: 20px 15px !important;
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+  #huong-dan strong {
+    font-size: 0.85rem !important;
+  }
+  #huong-dan span {
+    font-size: 0.8rem !important;
+    text-align: justify;
+  }
 }

@@ -1,19 +1,19 @@
-import React from 'react';
-import { Container, Button } from 'react-bootstrap';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { FaHome, FaUserShield, FaExclamationTriangle } from 'react-icons/fa';
+import React from "react";
+import { Container, Button } from "react-bootstrap";
+import { useLocation, useNavigate } from "react-router-dom";
+import { FaHome, FaUserShield, FaExclamationTriangle } from "react-icons/fa";
 
 const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const isAdmin = location.pathname.startsWith('/admin');
+  const isAdmin = location.pathname.startsWith("/admin");
 
   const handleBack = () => {
     if (isAdmin) {
-      navigate('/admin');
+      navigate("/admin");
     } else {
-      navigate('/');
+      navigate("/");
     }
   };
 

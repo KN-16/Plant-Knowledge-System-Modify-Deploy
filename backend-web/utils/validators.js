@@ -1,20 +1,22 @@
-import { body, param, query } from 'express-validator';
+import { body, param, query } from "express-validator";
 
 // --- Auth Validators ---
 export const registerReaderValidator = [
-  body('email').isEmail().withMessage('Please provide a valid email'),
-  body('password')
+  body("email").isEmail().withMessage("Please provide a valid email"),
+  body("password")
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long'),
-  body('HoLot').notEmpty().withMessage('First name (HoLot) is required'),
-  body('Ten').notEmpty().withMessage('Last name (Ten) is required'),
-  body('DienThoai').notEmpty().withMessage('Phone number is required'),
-  body('username').notEmpty().withMessage('Username is required'),
+    .withMessage("Password must be at least 6 characters long"),
+  body("HoLot").notEmpty().withMessage("First name (HoLot) is required"),
+  body("Ten").notEmpty().withMessage("Last name (Ten) is required"),
+  body("DienThoai").notEmpty().withMessage("Phone number is required"),
+  body("username").notEmpty().withMessage("Username is required"),
 ];
 
 export const loginValidator = [
-  body('identifier').notEmpty().withMessage('Identifier (email or username) is required'),
-  body('password').notEmpty().withMessage('Password is required'),
+  body("identifier")
+    .notEmpty()
+    .withMessage("Identifier (email or username) is required"),
+  body("password").notEmpty().withMessage("Password is required"),
 ];
 
 // // --- Book Validators ---
@@ -40,7 +42,7 @@ export const loginValidator = [
 //     .notEmpty()
 //     .withMessage('Address (DiaChi) is required when MaNXB is "new"'),
 // ];
-    
+
 // export const updateBookValidator = [
 //   param('id').isMongoId().withMessage('Invalid Book ID'),
 //   body('TenSach').optional().notEmpty().withMessage('Book Title cannot be empty'),
